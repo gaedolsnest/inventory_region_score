@@ -128,22 +128,30 @@ function fillRegionControls() {
   $("quarterSide").innerHTML = entries.map((q, i) => '<button class="side-item ' + (i === 0 ? "active" : "") + '" type="button" data-quarter="' + q.id + '">' + q.label + '</button>').join("");
   document.querySelectorAll("[data-quarter]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (currentDd) return;
+      const wasLoggedIn = Boolean(currentDd);
+      const preferredDd = currentDd || selectedLoginDd;
       document.querySelectorAll("[data-quarter]").forEach((b) => b.classList.toggle("active", b === btn));
       setCurrentQuarter(btn.dataset.quarter);
-      fillRegionsForQuarter();
+      fillRegionsForQuarter(preferredDd);
+      if (wasLoggedIn) {
+        currentDd = selectedLoginDd;
+        selectedId = null;
+        paintRegion(currentDd, true);
+        setStatus(isMaster ? currentQuarter + " · 마스터 · " + currentDd + " 조회 중" : currentQuarter + " · " + currentDd + " 조회 중");
+        doSearch();
+      }
     });
   });
   fillRegionsForQuarter();
 }
 
-function fillRegionsForQuarter() {
+function fillRegionsForQuarter(preferredDd = "") {
   const regions = Object.keys(currentQuarterData.regions || {}).sort((a, b) => a.localeCompare(b, "ko"));
-  selectedLoginDd = regions[0] || null;
+  selectedLoginDd = regions.includes(preferredDd) ? preferredDd : (regions[0] || null);
   updateSelectedRegion();
   const picker = $("regionPicker");
   picker.innerHTML = regions.map((dd) => '<button class="region-option" type="button" role="option" data-region="' + dd + '">' + dd + '</button>').join("");
-  paintRegion(selectedLoginDd || regions[0] || "", false);
+  paintRegion(selectedLoginDd || regions[0] || "", Boolean(currentDd));
   picker.querySelectorAll("[data-region]").forEach((button) => {
     button.addEventListener("click", () => {
       if (currentDd && !isMaster) return;
@@ -235,7 +243,7 @@ function buildVisibleRows() {
     .filter((row) => row.store !== "(AVG)")
     .map((row, idx) => ({ ...row, _id: "row-" + idx, _isAvg: false }));
 
-  if (currentDd) {
+  if (currentDd && !isMaster) {
     const localKeys = new Set(sourceRows.filter((r) => r.dd === currentDd).map(personKey));
     sourceRows = sourceRows.filter((r) => localKeys.has(personKey(r)));
   }
