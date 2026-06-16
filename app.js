@@ -239,11 +239,12 @@ function buildAvgRow(rows, idSeed) {
 
 function buildVisibleRows() {
   const q = norm($("qInput").value);
+  const globalSearch = isMaster && q;
   let sourceRows = currentQuarterData.rows
     .filter((row) => row.store !== "(AVG)")
     .map((row, idx) => ({ ...row, _id: "row-" + idx, _isAvg: false }));
 
-  if (currentDd && !isMaster) {
+  if (currentDd && !globalSearch) {
     const localKeys = new Set(sourceRows.filter((r) => r.dd === currentDd).map(personKey));
     sourceRows = sourceRows.filter((r) => localKeys.has(personKey(r)));
   }
