@@ -1,4 +1,4 @@
-const DATA_URL = "webdata.bin";
+﻿const DATA_URL = "webdata.bin";
 const MAGIC = new TextEncoder().encode("SCOREENC\n");
 const SALT_LEN = 16;
 const NONCE_LEN = 12;
@@ -6,62 +6,67 @@ const PBKDF2_ITERS = 200000;
 const INTERNAL_PASSPHRASE = "ABCMART_SCOREAPP_INTERNAL_KEY_V1_WEB";
 const MASTER_KEY = "audit2026!";
 const REGION_MANAGERS = {
-  "강원지역": "임동주 지역장", "경남지역": "조우리 지역장", "경북지역": "장규호 지역장",
-  "남동지역": "이하림 지역장", "남서지역": "유영찬 지역장", "대경지역": "박양근 지역장",
-  "동남지역": "박진선 지역장", "동북지역": "김대훈 지역장", "부경지역": "박근탁 지역장",
-  "온더스팟": "김현지 수석", "북동지역": "강민혁 지역장", "북서지역": "하민철 지역장",
-  "서남지역": "김잔디 지역장", "서북지역": "김영호 지역장", "전남지역": "최우석 지역장",
-  "전북지역": "최승문 지역장", "제주지역": "박준길 지역장", "중남지역": "조재광 지역장",
-  "중부지역": "김영규 지역장", "중서지역": "김동순 지역장", "충남지역": "윤영보 지역장",
+  "강원지역": "임동주 지역장",
+  "경남지역": "조우리 지역장",
+  "경북지역": "장규호 지역장",
+  "남동지역": "이하림 지역장",
+  "남서지역": "유영찬 지역장",
+  "대경지역": "박양근 지역장",
+  "동남지역": "박진선 지역장",
+  "동북지역": "김대훈 지역장",
+  "부경지역": "박근탁 지역장",
+  "온더스팟": "김현지 수석",
+  "북동지역": "강민혁 지역장",
+  "북서지역": "하민철 지역장",
+  "서남지역": "김잔디 지역장",
+  "서북지역": "김영호 지역장",
+  "전남지역": "최우석 지역장",
+  "전북지역": "최승문 지역장",
+  "제주지역": "박준길 지역장",
+  "중남지역": "조재광 지역장",
+  "중부지역": "김영규 지역장",
+  "중서지역": "김동순 지역장",
+  "충남지역": "윤영보 지역장",
   "충북지역": "변혜영 지역장"
 };
 
 let dataObj = null;
 let currentQuarter = null;
 let currentQuarterData = null;
-let selectedLoginDd = null;
 let currentDd = null;
 let isMaster = false;
-let peopleRows = [];
-let selectedPersonKey = null;
-let personAliasMap = new Map();
+let visibleRows = [];
+let selectedId = null;
+let selectedLoginDd = null;
 
 const $ = (id) => document.getElementById(id);
 const norm = (s) => String(s || "").replace(/\s+/g, "").trim().toLowerCase();
-const normalizePosition = (pos) => String(pos || "").replace(/매니져/g, "매니저").replace(/점잠/g, "점장").trim();
 const fmt2 = (v) => {
   const n = Number(v);
-  return Number.isFinite(n) ? n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-";
+  if (!Number.isFinite(n)) return "";
+  return n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
-const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-const scoreClass = (v) => Number(v) < 85 ? "score-high" : "";
-const deltaClass = (v) => !Number.isFinite(v) ? "" : v < 0 ? "bad" : v > 0 ? "good" : "";
-const fmtDelta = (v, empty = "N/A") => {
-  if (!Number.isFinite(v)) return empty;
-  if (Math.abs(v) < 0.005) return "0.00";
-  return (v > 0 ? "+" : "") + fmt2(v);
-};
-const rawPersonKey = (r) => norm((r.name || "") + "|" + (r.emp || r.name || ""));
-const personKey = (r) => personAliasMap.get(rawPersonKey(r)) || rawPersonKey(r);
+const personKey = (r) => norm((r.emp || r.name || "") + "|" + (r.pos || ""));
 
-function getSearchInput() {
-  return $("qInputInline") || $("qInput");
+function regionManager(region) {
+  return REGION_MANAGERS[region] || "";
 }
 
-function getSuperInput() {
-  return $("superInput");
+function noteInfo(item) {
+  if (!item) return null;
+  const raw = String(item.note_raw || item.note || "").trim();
+  const type = item.note_type || (raw.includes("대체") ? "replacement" : raw.includes("인수인계") ? "handover" : "");
+  const label = item.note || (type === "replacement" ? "대체" : type === "handover" ? "인수인계" : "");
+  return label ? { label, type } : null;
 }
 
-function isSuperSearchActive() {
-  return Boolean(isMaster && getSuperInput() && norm(getSuperInput().value));
+function noteBadge(item) {
+  const info = noteInfo(item);
+  return info ? '<em class="note-badge ' + info.type + '">' + info.label + '</em>' : "";
 }
 
 function setStatus(text) {
   $("sessionBadge").innerHTML = '<span class="dot"></span> ' + text;
-}
-
-function regionManager(region) {
-  return REGION_MANAGERS[region] || "";
 }
 
 async function pbkdf2Key(passphrase, salt) {
@@ -91,554 +96,345 @@ async function decryptBlob(arrayBuffer) {
 async function loadData() {
   setStatus("데이터 로드 중");
   const res = await fetch(DATA_URL, { cache: "no-store" });
-  if (!res.ok) throw new Error("webdata 로드 실패: " + res.status);
+  if (!res.ok) throw new Error("webdata.bin 로드 실패: " + res.status);
   dataObj = JSON.parse(await decryptBlob(await res.arrayBuffer()));
-  setCurrentQuarter(dataObj.defaultQuarter || "2026Q1");
-  fillQuarterControls();
-  fillRegionsForQuarter();
+  if (!dataObj || (!dataObj.quarters && (!dataObj.regions || !Array.isArray(dataObj.rows)))) throw new Error("데이터 형식 오류");
+  fillRegionControls();
+  if (!currentQuarterData || !currentQuarterData.regions || !Array.isArray(currentQuarterData.rows)) throw new Error("분기 데이터 형식 오류");
   setStatus("지역 선택 대기");
 }
 
-function quarterEntries() {
-  return Object.entries(dataObj.quarters || {}).map(([id, data]) => ({
-    id,
-    label: formatQuarterLabel(id, data.label),
-    data,
-    rank: quarterRank(id),
-  })).sort((a, b) => a.rank - b.rank);
-}
-
-function formatQuarterLabel(id, label) {
-  const source = String(label || id || "");
-  const match = source.match(/(20\d{2})\s*Q([1-4])/i) || String(id || "").match(/(20\d{2})Q([1-4])/i);
-  return match ? match[1] + " Q" + match[2] : source;
-}
-
-function currentQuarterLabel() {
-  const data = dataObj && dataObj.quarters ? dataObj.quarters[currentQuarter] : null;
-  return formatQuarterLabel(currentQuarter, data && data.label);
-}
-
-function quarterRank(id) {
-  const m = String(id).match(/(\d{4})Q([1-4])/);
-  return m ? Number(m[1]) * 10 + Number(m[2]) : 0;
+function getQuarterEntries() {
+  if (dataObj.quarters) {
+    return Object.entries(dataObj.quarters).map(([id, q]) => ({
+      id,
+      label: q.label || id.replace(/Q([1-4])$/, " Q$1"),
+      data: q,
+    }));
+  }
+  return [{ id: "2026Q1", label: "2026 Q1", data: dataObj }];
 }
 
 function setCurrentQuarter(id) {
-  const entry = quarterEntries().find((q) => q.id === id) || quarterEntries().at(-1);
+  const entries = getQuarterEntries();
+  const entry = entries.find((q) => q.id === id) || entries[0];
   currentQuarter = entry.id;
   currentQuarterData = entry.data;
 }
 
-function fillQuarterControls() {
-  const entries = quarterEntries();
-  $("quarterSide").innerHTML = entries.map((q) =>
-    '<button class="side-item ' + (q.id === currentQuarter ? "active" : "") + '" type="button" data-quarter="' + q.id + '">' + q.label + '</button>'
-  ).join("");
+function fillRegionControls() {
+  const entries = getQuarterEntries();
+  setCurrentQuarter(entries[0].id);
+  $("quarterSide").innerHTML = entries.map((q, i) => '<button class="side-item ' + (i === 0 ? "active" : "") + '" type="button" data-quarter="' + q.id + '">' + q.label + '</button>').join("");
   document.querySelectorAll("[data-quarter]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      setCurrentQuarter(btn.dataset.quarter);
+      if (currentDd) return;
       document.querySelectorAll("[data-quarter]").forEach((b) => b.classList.toggle("active", b === btn));
+      setCurrentQuarter(btn.dataset.quarter);
       fillRegionsForQuarter();
-      if (currentDd) {
-        selectedPersonKey = null;
-        paintRegion(currentDd, true);
-        setStatus(currentQuarterLabel() + (isMaster ? " · 마스터 · " : " · ") + currentDd + " 조회 중");
-        doSearch();
-      }
     });
   });
+  fillRegionsForQuarter();
 }
 
 function fillRegionsForQuarter() {
   const regions = Object.keys(currentQuarterData.regions || {}).sort((a, b) => a.localeCompare(b, "ko"));
-  const preferred = currentDd || selectedLoginDd;
-  selectedLoginDd = currentDd ? (regions.includes(preferred) ? preferred : null) : null;
+  selectedLoginDd = regions[0] || null;
   updateSelectedRegion();
   const picker = $("regionPicker");
   picker.innerHTML = regions.map((dd) => '<button class="region-option" type="button" role="option" data-region="' + dd + '">' + dd + '</button>').join("");
-  paintRegion(currentDd || selectedLoginDd || "", Boolean(currentDd));
-  if ($("regionFilter")) {
-    $("regionFilter").oninput = applyRegionFilter;
-    applyRegionFilter();
-  }
+  paintRegion(selectedLoginDd || regions[0] || "", false);
   picker.querySelectorAll("[data-region]").forEach((button) => {
     button.addEventListener("click", () => {
       if (currentDd && !isMaster) return;
       selectedLoginDd = button.dataset.region;
       if (isMaster) {
-        if (getSuperInput()) getSuperInput().value = "";
         currentDd = selectedLoginDd;
-        selectedPersonKey = null;
-        paintRegion(currentDd, true);
-        setStatus(currentQuarterLabel() + " · 마스터 · " + currentDd + " 조회 중");
+        selectedId = null;
+        paintRegion(selectedLoginDd, true);
+        setStatus(currentQuarter + " · 마스터 · " + selectedLoginDd + " 조회 중");
         doSearch();
-      } else {
-        paintRegion(selectedLoginDd, false);
-        updateSelectedRegion();
-        if ($("codeInput")) $("codeInput").focus();
+        return;
       }
+      paintRegion(selectedLoginDd, false);
+      updateSelectedRegion();
     });
   });
 }
 
 function updateSelectedRegion() {
-  const manager = regionManager(selectedLoginDd);
-  $("selectedRegionName").innerHTML = selectedLoginDd ? selectedLoginDd + (manager ? '<small>(' + manager + ')</small>' : "") : "지역을 선택하세요";
-  if ($("codeInput")) {
-    $("codeInput").disabled = !selectedLoginDd;
-    $("codeInput").placeholder = selectedLoginDd ? "지역 암호 입력" : "지역을 먼저 선택하세요";
+  const el = $("selectedRegionName");
+  if (el) {
+    const manager = regionManager(selectedLoginDd);
+    el.innerHTML = (selectedLoginDd || "-") + (manager ? '<small>(' + manager + ')</small>' : "");
   }
-  if ($("enterBtn")) $("enterBtn").disabled = !selectedLoginDd;
-}
-
-function applyRegionFilter() {
-  const query = norm($("regionFilter") ? $("regionFilter").value : "");
-  $("regionPicker").querySelectorAll("[data-region]").forEach((button) => {
-    button.classList.toggle("hidden", Boolean(query) && !norm(button.dataset.region).includes(query));
-  });
 }
 
 function paintRegion(region, locked) {
-  $("regionPicker").querySelectorAll("[data-region]").forEach((button) => {
-    const active = button.dataset.region === region;
-    button.classList.toggle("active", active);
-    button.disabled = Boolean(locked && !isMaster && !active);
-  });
+  const picker = $("regionPicker");
+  if (picker) {
+    picker.querySelectorAll("[data-region]").forEach((button) => {
+      const active = button.dataset.region === region;
+      button.classList.toggle("active", active);
+      button.disabled = Boolean(locked && !isMaster && !active);
+    });
+  }
 }
 
 function validateRegion(dd, code) {
-  if (norm(code) === norm(MASTER_KEY)) return "master";
   const expected = norm(currentQuarterData.regions[dd]);
   if (!expected) throw new Error("지역 정보가 없습니다.");
+  if (norm(code) === norm(MASTER_KEY)) return "master";
   if (norm(code) !== expected) throw new Error("지역/암호가 틀립니다.");
   return "region";
 }
 
-function isTargetPosition(pos) {
-  const text = norm(normalizePosition(pos));
-  return text.includes("점장") || text.includes("부점장") || text.includes("매니저");
-}
-
-function cleanRows(rows) {
-  return (rows || []).filter((r) => r.store !== "(AVG)" && r.name && r.emp && String(r.name).toLowerCase() !== "n/a" && isTargetPosition(r.pos));
-}
-
-function rowsForQuarter(id) {
-  const q = (dataObj.quarters || {})[id];
-  return q ? cleanRows(q.rows).map((r, idx) => ({ ...r, emp: formatEmployeeId(r.emp), pos: normalizePosition(r.pos), _quarterId: id, _quarterLabel: q.label || formatQuarterLabel(id), _rowIndex: idx })) : [];
-}
-
-function rowsThroughSelectedQuarter() {
-  const selectedRank = quarterRank(currentQuarter);
-  return quarterEntries().filter((q) => q.rank <= selectedRank).flatMap((q) => rowsForQuarter(q.id));
-}
-
-function rowDate(row) {
+function rowSortDate(row) {
   const dates = [];
   if (Array.isArray(row.records)) {
-    row.records.forEach((rec) => {
+    for (const rec of row.records) {
       if (rec.date) dates.push(String(rec.date));
       if (rec.detail && rec.detail.E) dates.push(String(rec.detail.E));
-    });
+    }
   }
-  return dates.sort().at(-1) || row._quarterLabel || "";
+  if (row.latest_date) dates.push(String(row.latest_date));
+  return dates.sort().at(-1) || "";
 }
 
-function groupByPerson(rows) {
-  const map = new Map();
-  rows.forEach((row) => {
+function buildAvgRow(rows, idSeed) {
+  const scores = rows.map((r) => Number(r.ap_avg)).filter(Number.isFinite);
+  if (scores.length <= 1) return null;
+  const base = rows[0];
+  const stores = rows.map((r) => r.store).filter(Boolean);
+  const storeScores = rows.map((r) => ({
+    store: r.store || "",
+    ap_avg: r.ap_avg,
+    latest_date: rowSortDate(r),
+    dd: r.dd || "",
+    note: r.note || "",
+    note_type: r.note_type || "",
+    note_raw: r.note_raw || "",
+  }));
+  return {
+    ...base,
+    _id: "avg-" + idSeed,
+    _isAvg: true,
+    _children: rows,
+    store: "(AVG)",
+    ap_avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+    audit_count: rows.length,
+    stores,
+    store_scores: storeScores,
+    records: [],
+  };
+}
+
+function buildVisibleRows() {
+  const q = norm($("qInput").value);
+  let sourceRows = currentQuarterData.rows
+    .filter((row) => row.store !== "(AVG)")
+    .map((row, idx) => ({ ...row, _id: "row-" + idx, _isAvg: false }));
+
+  if (currentDd) {
+    const localKeys = new Set(sourceRows.filter((r) => r.dd === currentDd).map(personKey));
+    sourceRows = sourceRows.filter((r) => localKeys.has(personKey(r)));
+  }
+
+  if (q) sourceRows = sourceRows.filter((r) => norm(r.store).includes(q) || norm(r.name).includes(q));
+
+  const groups = new Map();
+  for (const row of sourceRows) {
     const key = personKey(row);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(row);
-  });
-  return map;
-}
-
-function currentRegionPersonKeys() {
-  return new Set(rowsForQuarter(currentQuarter).filter((r) => r.dd === currentDd).map(personKey));
-}
-
-function scoreOf(row) {
-  const n = Number(row.ap_avg);
-  return Number.isFinite(n) ? n : null;
-}
-
-function normalizedEmp(emp) {
-  const digits = String(emp || "").replace(/\D/g, "");
-  if (digits === "211037") return "2110137";
-  return digits ? digits.replace(/^0+/, "") || "0" : norm(emp);
-}
-
-function formatEmployeeId(emp) {
-  const text = String(emp || "").trim();
-  if (text === "211037" || text === "21101037") return "2110137";
-  return /^\d{5}$/.test(text) ? "0" + text : text;
-}
-
-function normalizedStoreRoot(store) {
-  return norm(String(store || "").replace(/^(GS|GSA|ST|SE|KM|SP|MS|OTS)\s*/i, "").replace(/점$/, ""));
-}
-
-function hasSharedStoreRoot(a, b) {
-  for (const root of a.storeRoots) {
-    if (root && b.storeRoots.has(root)) return true;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
   }
-  return false;
-}
 
-function buildPersonAliases(rows) {
-  personAliasMap = new Map();
-  const byName = new Map();
-  rows.filter((r) => r.store !== "(AVG)" && r.name && r.emp).forEach((row) => {
-    const nameKey = norm(row.name);
-    const empKey = String(row.emp || "");
-    if (!byName.has(nameKey)) byName.set(nameKey, new Map());
-    const empMap = byName.get(nameKey);
-    if (!empMap.has(empKey)) {
-      empMap.set(empKey, { emp: empKey, normalizedEmp: normalizedEmp(empKey), storeRoots: new Set(), rows: [] });
-    }
-    const item = empMap.get(empKey);
-    item.storeRoots.add(normalizedStoreRoot(row.store));
-    item.rows.push(row);
-  });
-
-  byName.forEach((empMap) => {
-    const groups = Array.from(empMap.values());
-    if (groups.length < 2) return;
-    const parent = new Map(groups.map((g) => [g.emp, g.emp]));
-    const find = (x) => {
-      while (parent.get(x) !== x) x = parent.get(x);
-      return x;
-    };
-    const union = (a, b) => {
-      const ra = find(a);
-      const rb = find(b);
-      if (ra !== rb) parent.set(rb, ra);
-    };
-    for (let i = 0; i < groups.length; i++) {
-      for (let j = i + 1; j < groups.length; j++) {
-        const a = groups[i];
-        const b = groups[j];
-        if (a.normalizedEmp === b.normalizedEmp || hasSharedStoreRoot(a, b)) union(a.emp, b.emp);
-      }
-    }
-    const clusters = new Map();
-    groups.forEach((g) => {
-      const root = find(g.emp);
-      if (!clusters.has(root)) clusters.set(root, []);
-      clusters.get(root).push(g);
+  const groupList = Array.from(groups.values()).map((rows, groupIdx) => {
+    rows.sort((a, b) => {
+      const aLocal = a.dd === currentDd ? 0 : 1;
+      const bLocal = b.dd === currentDd ? 0 : 1;
+      if (!isMaster && aLocal !== bLocal) return aLocal - bLocal;
+      const date = rowSortDate(a).localeCompare(rowSortDate(b));
+      if (date) return date;
+      return String(a.store || "").localeCompare(String(b.store || ""), "ko");
     });
-    clusters.forEach((cluster) => {
-      if (cluster.length < 2) return;
-      const latest = cluster.flatMap((g) => g.rows).sort((a, b) => {
-        const q = quarterRank(b._quarterId) - quarterRank(a._quarterId);
-        if (q) return q;
-        return String(rowDate(b)).localeCompare(String(rowDate(a)));
-      })[0];
-      const canonical = rawPersonKey(latest);
-      cluster.forEach((g) => {
-        g.rows.forEach((row) => personAliasMap.set(rawPersonKey(row), canonical));
-      });
-    });
-  });
-}
-
-function buildPeopleRows() {
-  const historyScopeRows = rowsThroughSelectedQuarter();
-  buildPersonAliases(historyScopeRows);
-  const superQuery = isSuperSearchActive() ? norm(getSuperInput().value) : "";
-  const query = superQuery || norm(getSearchInput().value);
-  const currentRows = superQuery
-    ? rowsForQuarter(currentQuarter)
-    : rowsForQuarter(currentQuarter).filter((r) => r.dd === currentDd);
-  const allowedKeys = new Set(currentRows.map(personKey));
-  const historyByPerson = groupByPerson(historyScopeRows.filter((r) => allowedKeys.has(personKey(r))));
-  const currentByPerson = groupByPerson(currentRows);
-
-  peopleRows = Array.from(currentByPerson.entries()).map(([key, rows]) => {
-    const history = (historyByPerson.get(key) || []).sort((a, b) => {
-      const q = quarterRank(a._quarterId) - quarterRank(b._quarterId);
-      if (q) return q;
-      return String(rowDate(a)).localeCompare(String(rowDate(b)));
-    });
-    const scores = history.map(scoreOf).filter((v) => v !== null);
-    const currentScores = rows.map(scoreOf).filter((v) => v !== null);
-    const currentAvg = avg(currentScores);
-    const prevQuarterRows = history.filter((r) => quarterRank(r._quarterId) < quarterRank(currentQuarter));
-    const prevQuarterId = prevQuarterRows.at(-1)?._quarterId;
-    const prevRows = prevQuarterId ? prevQuarterRows.filter((r) => r._quarterId === prevQuarterId) : [];
-    const prevAvg = avg(prevRows.map(scoreOf).filter((v) => v !== null));
-    const delta = currentAvg !== null && prevAvg !== null ? currentAvg - prevAvg : null;
-    const historyAvg = avg(scores);
-    const avgDelta = currentAvg !== null && historyAvg !== null ? currentAvg - historyAvg : null;
+    const avg = buildAvgRow(rows, groupIdx);
     const first = rows[0];
-    const stores = [...new Set(rows.map((r) => r.store).filter(Boolean))];
     return {
-      key,
+      key: personKey(first),
       name: first.name || "",
       emp: first.emp || "",
       pos: first.pos || "",
-      store: stores.join(", "),
-      currentRows: rows,
-      history,
-      currentAvg,
-      prevAvg,
-      delta,
-      historyAvg,
-      avgDelta,
-      lowCount: scores.filter((v) => v < 85).length,
-      high: scores.length ? Math.max(...scores) : null,
-      low: scores.length ? Math.min(...scores) : null,
-      count: history.length,
+      rows: avg ? [avg, ...rows] : rows,
     };
-  }).filter((person) => {
-    if (!currentDd && !superQuery) return false;
-    if (!query) return true;
-    const hay = norm([
-      person.name,
-      person.emp,
-      person.store,
-      person.pos,
-      ...person.currentRows.map((r) => r.dd),
-      ...person.history.flatMap((r) => [r.store, r.dd, r.name, r.emp, r.pos, r._quarterLabel]),
-    ].join(" "));
-    return hay.includes(query);
   });
 
-  peopleRows.sort((a, b) => {
-    const d = (a.currentAvg ?? 999) - (b.currentAvg ?? 999);
-    if (d) return d;
-    const avgD = (a.avgDelta ?? 0) - (b.avgDelta ?? 0);
-    if (avgD) return avgD;
-    return a.name.localeCompare(b.name, "ko");
+  groupList.sort((a, b) => {
+    const n = String(a.name).localeCompare(String(b.name), "ko");
+    if (n) return n;
+    const e = String(a.emp).localeCompare(String(b.emp), "ko");
+    if (e) return e;
+    return String(a.pos).localeCompare(String(b.pos), "ko");
   });
-}
 
-function setMetric(index, label, value, sub = "", cls = "") {
-  const card = document.querySelectorAll(".metric")[index];
-  if (!card) return;
-  card.querySelector("span").textContent = label;
-  card.querySelector("strong").textContent = value;
-  let small = card.querySelector("small");
-  if (!small) {
-    small = document.createElement("small");
-    card.appendChild(small);
+  visibleRows = [];
+  for (const group of groupList) {
+    group.rows.forEach((row, index) => {
+      visibleRows.push({ ...row, _groupKey: group.key, _groupStart: index === 0, _groupSize: group.rows.length });
+    });
   }
-  small.className = cls;
-  small.textContent = sub;
 }
 
-function trendLabel(delta) {
-  if (!Number.isFinite(delta)) return { text: "이력 부족", cls: "warn" };
-  if (delta >= 2) return { text: "상승", cls: "up" };
-  if (delta <= -2) return { text: "하락", cls: "down" };
-  return { text: "유지", cls: "flat" };
+function rowKind(row) {
+  if (row.store === "(AVG)") return "평가 평균";
+  if (isMaster) return row.dd || "";
+  return row.dd === currentDd ? currentDd : "타지역";
 }
 
-function renderRegionSummary() {
-  const scores = peopleRows.map((p) => p.currentAvg).filter((v) => v !== null);
-  const historyPeople = peopleRows.filter((p) => p.count > 1).length;
-  if (isSuperSearchActive()) {
-    setMetric(0, "마스터 검색", currentQuarterLabel(), "전체 지역 기준");
-    setMetric(1, "검색 결과", String(peopleRows.length), "이름 · 사번 · 점포명");
-    setMetric(2, "누적 이력", historyPeople + "명", "2회 이상 평가 이력");
-    setMetric(3, "결과 평균", fmt2(avg(scores)), "검색 결과 기준");
-    return;
+function badgeClass(row) {
+  if (row.store === "(AVG)") return "badge avg";
+  if (!isMaster && row.dd !== currentDd) return "badge other";
+  return "badge";
+}
+
+function renderSummary() {
+  const localRows = visibleRows.filter((r) => isMaster || r.dd === currentDd);
+  const stores = new Set(localRows.filter((r) => r.store && r.store !== "(AVG)").map((r) => r.store));
+  const scores = localRows.map((r) => Number(r.ap_avg)).filter(Number.isFinite);
+  const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+  {
+    const manager = regionManager(currentDd);
+    $("metricRegion").innerHTML = (currentDd || "-") + (manager ? '<small>(' + manager + ')</small>' : "");
   }
-  if (!currentDd) {
-    setMetric(0, "마스터", currentQuarterLabel(), "지역 선택 또는 전체 검색 대기");
-    setMetric(1, "검색 범위", "전체 지역", "이름 · 사번 · 점포명");
-    setMetric(2, "지역 조회", "왼쪽 선택", "선택 시 지역 화면 표시");
-    setMetric(3, "상태", "대기", "마스터 검색 가능");
-    return;
-  }
-  const manager = regionManager(currentDd);
-  setMetric(0, "조회 기준", currentQuarterLabel(), currentDd + (manager ? " · " + manager : ""));
-  setMetric(1, "대상 점장", String(peopleRows.length), "선택 분기 기준");
-  setMetric(2, "누적 이력", historyPeople + "명", "2회 이상 평가 이력");
-  setMetric(3, "지역 평균", fmt2(avg(scores)), "점장 평균 기준");
-}
-
-function renderPersonSummary(person) {
-  if (!person) return renderRegionSummary();
-  setMetric(0, "선택 점장", person.name, person.emp + " · " + person.pos);
-  setMetric(1, "평가 점수", fmt2(person.currentAvg), currentQuarterLabel(), Number(person.currentAvg) < 85 ? "bad" : "");
-  setMetric(2, "직전 대비", fmtDelta(person.delta), person.prevAvg === null ? "이전 이력 없음" : "이전 평가 기준", deltaClass(person.delta));
-  setMetric(3, "평가 이력", person.count + "회", "2025 Q1 이후 누적");
+  $("metricStores").textContent = String(stores.size);
+  $("metricRows").textContent = String(new Set(localRows.map(personKey)).size);
+  $("metricAvg").textContent = avg === null ? "-" : fmt2(avg);
 }
 
 function renderTable() {
   const tbody = $("resultTable").querySelector("tbody");
-  const global = isSuperSearchActive();
-  tbody.innerHTML = peopleRows.map((p) => {
-    const selected = p.key === selectedPersonKey;
-    const deltaText = fmtDelta(p.delta);
-    const avgDeltaText = fmtDelta(p.avgDelta, "0.00");
-    return '<tr data-key="' + p.key + '" class="' + (selected ? "selected" : "") + '">' +
-      '<td>' + (p.store || "") + '</td><td>' + p.name + '</td><td>' + p.emp + '</td><td>' + p.pos + '</td>' +
-      '<td class="num ' + scoreClass(p.currentAvg) + '">' + fmt2(p.currentAvg) + '</td>' +
-      '<td class="num ' + deltaClass(p.avgDelta) + '">' + avgDeltaText + '</td>' +
-      '<td class="num ' + deltaClass(p.delta) + '">' + deltaText + '</td>' +
-      '<td class="num">' + p.count + '회</td></tr>';
+  tbody.innerHTML = visibleRows.map((r) => {
+    const selected = r._id === selectedId;
+    const store = r.store === "(AVG)" ? "평가 평균" : (r.store || "");
+    const groupClass = (r._groupStart ? " group-start" : "") + (r._isAvg ? " avg-row" : "");
+    return '<tr data-id="' + r._id + '" class="' + (selected ? "selected" : "") + groupClass + '">' +
+      '<td><span class="' + badgeClass(r) + '">' + rowKind(r) + '</span></td>' +
+      '<td>' + store + '</td><td>' + (r.name || "") + '</td><td>' + (r.emp || "") + '</td><td>' + (r.pos || "") + '</td>' +
+      '<td class="num ' + (Number(r.ap_avg) < 85 ? "score-high" : "") + '">' + fmt2(r.ap_avg) + '</td></tr>';
   }).join("");
-  tbody.querySelectorAll("tr").forEach((tr) => tr.addEventListener("click", () => selectPerson(tr.dataset.key)));
-  $("resultHint").textContent = (global ? "전체 검색 " : "점장 ") + peopleRows.length + "명";
+  tbody.querySelectorAll("tr").forEach((tr) => tr.addEventListener("click", () => selectRow(tr.dataset.id)));
+  $("resultHint").textContent = "조회 결과 " + visibleRows.length + "건";
 }
 
-function renderDetail(person) {
-  if (!person) {
+function renderDetail(row) {
+  if (!row) {
+    $("detailBody").innerHTML = '<div class="empty">조회 결과에서 행을 선택하세요.</div>';
     $("detailScope").textContent = "선택 대기";
-    $("detailBody").innerHTML = '<div class="empty">' + (isMaster && !currentDd ? "마스터 검색어를 입력하거나 왼쪽에서 지역을 선택하세요." : "지역 점장 목록에서 행을 선택하세요.") + '</div>';
     return;
   }
-  $("detailScope").textContent = person.name + " · " + currentQuarter;
-  const regionScores = peopleRows.map((p) => p.currentAvg).filter((v) => v !== null);
-  const regionAvg = avg(regionScores);
-  const vsRegion = person.currentAvg !== null && regionAvg !== null ? person.currentAvg - regionAvg : null;
-  const trendMap = new Map();
-  person.history.forEach((row) => {
-    if (!trendMap.has(row._quarterId)) trendMap.set(row._quarterId, []);
-    const value = scoreOf(row);
-    if (value !== null) trendMap.get(row._quarterId).push(value);
-  });
-  const trend = Array.from(trendMap.entries()).map(([id, values]) => ({ id, label: (dataObj.quarters[id]?.label || id), value: avg(values) }));
-  const recentTrend = trendLabel(person.delta);
-  const events = person.history.slice().sort((a, b) => {
-    const q = quarterRank(a._quarterId) - quarterRank(b._quarterId);
-    if (q) return q;
-    return String(rowDate(a)).localeCompare(String(rowDate(b)));
-  });
-  const initial = String(person.name || "?").slice(0, 1);
-  $("detailBody").innerHTML =
-    '<div class="profile"><div class="avatar">' + initial + '</div><div><strong>' + person.name + '</strong><span>' + person.emp + ' · ' + person.pos + ' · ' + (person.store || "") + '</span></div></div>' +
-    '<div class="person-insights">' +
-      '<div class="insight-card"><span>개인 평균</span><strong>' + fmt2(person.historyAvg) + '</strong></div>' +
-      '<div class="insight-card"><span>누적 평균 대비</span><strong class="' + deltaClass(person.avgDelta) + '">' + fmtDelta(person.avgDelta, "0.00") + '</strong></div>' +
-      '<div class="insight-card"><span>지역 평균 대비</span><strong class="' + deltaClass(vsRegion) + '">' + fmtDelta(vsRegion) + '</strong></div>' +
-      '<div class="insight-card"><span>최근 흐름</span><strong class="' + recentTrend.cls + '">' + recentTrend.text + '</strong></div>' +
-    '</div>' +
-    '<div class="detail-title">최근 평가 흐름</div>' +
-    '<div class="trend-row">' + trend.map((t) => '<div class="trend-chip"><span>' + t.label + '</span><strong class="' + scoreClass(t.value) + '">' + fmt2(t.value) + '</strong></div>').join("") + '</div>' +
-    '<div class="detail-title">점포 / 지역 이동 이력</div>' +
-    '<div class="timeline">' + events.map((r) => '<div class="audit-event"><strong>' + r._quarterLabel + ' · ' + (r.store || "") + ' · ' + fmt2(r.ap_avg) + '</strong><span>' + (r.dd || "") + ' · 당시 담당 ' + (r.name || "") + ' ' + (r.emp || "") + ' ' + (r.pos || "") + ' · 조사일자 ' + rowDate(r) + '</span></div>').join("") + '</div>' +
-    '<p class="notice">선택한 분기 이후의 미래 데이터는 표시하지 않습니다. 2025년 이후 자료는 참고 아카이빙 기준입니다.</p>';
+  const initial = String(row.name || "?").slice(0, 1);
+  const storeLabel = row.store === "(AVG)" ? "평가 평균" : (row.store || "");
+  const isOther = !isMaster && row.dd !== currentDd && row.store !== "(AVG)";
+  $("detailScope").textContent = rowKind(row);
+  const scoreTitle = row.store === "(AVG)" ? "평가 평균" : "최종 점수";
+  let html = '<div class="profile"><div class="avatar">' + initial + '</div><div><strong>' + (row.name || "") + '</strong><span>' + (row.emp || "") + ' · ' + (row.pos || "") + ' · ' + storeLabel + '</span></div></div>';
+  html += '<div class="score-box"><div class="mini"><span>' + scoreTitle + '</span><strong class="' + (Number(row.ap_avg) < 85 ? "score-high" : "") + '">' + fmt2(row.ap_avg) + '</strong></div><div class="mini"><span>구분</span><strong>' + rowKind(row) + '</strong></div></div>';
+  if (row.store === "(AVG)" && Array.isArray(row.store_scores)) {
+    html += '<div class="timeline">' + row.store_scores.map((s) => '<div class="audit"><strong>' + (s.store || "") + ' · ' + fmt2(s.ap_avg) + noteBadge(s) + '</strong><span>최근 조사일 ' + (s.latest_date || "-") + '</span></div>').join("") + '</div>';
+  } else if (isOther) {
+    html += '<div class="audit"><strong>타지역 점수 요약</strong><span>평균 산정을 위한 점수만 표시하고 상세 조사 내역은 숨깁니다.</span></div>';
+  } else if (Array.isArray(row.records) && row.records.length) {
+    html += '<div class="timeline">' + row.records.map((rec) => {
+      const d = rec.detail || {};
+      return '<div class="audit"><strong>' + (rec.date || d.E || "-") + ' · ' + fmt2(rec.ap) + noteBadge(rec.note ? rec : row) + '</strong><span>신발 ' + (d.I ?? "") + ' · 용품 ' + (d.R ?? "") + ' · 의류 ' + (d.AA ?? "") + '</span></div>';
+    }).join("") + '</div>';
+  }
+  $("detailBody").innerHTML = html;
+}
+
+function selectRow(id) {
+  selectedId = id;
+  renderTable();
+  renderDetail(visibleRows.find((r) => r._id === id));
 }
 
 function doSearch() {
-  buildPeopleRows();
-  if (!peopleRows.some((p) => p.key === selectedPersonKey)) selectedPersonKey = peopleRows[0]?.key || null;
-  const selected = peopleRows.find((p) => p.key === selectedPersonKey);
-  renderPersonSummary(selected);
+  buildVisibleRows();
+  renderSummary();
+  if (!visibleRows.some((r) => r._id === selectedId)) selectedId = visibleRows[0]?._id ?? null;
   renderTable();
-  renderDetail(selected);
-}
-
-function selectPerson(key) {
-  selectedPersonKey = key;
-  const selected = peopleRows.find((p) => p.key === key);
-  renderPersonSummary(selected);
-  renderTable();
-  renderDetail(selected);
-}
-
-function brandHome() {
-  if (!dataObj) return;
-  if (currentDd && !isMaster) {
-    logout();
-    return;
-  }
-  selectedPersonKey = null;
-  getSearchInput().value = "";
-  if (getSuperInput()) getSuperInput().value = "";
-  if (isMaster) {
-    currentDd = null;
-    selectedLoginDd = null;
-    paintRegion("", false);
-    updateSelectedRegion();
-    setStatus(currentQuarterLabel() + " · 마스터 · 전체 검색 대기");
-  }
-  doSearch();
-}
-
-function openSession(dd, master) {
-  isMaster = master;
-  currentDd = dd || null;
-  selectedPersonKey = null;
-  $("loginToolbar").classList.add("hidden");
-  $("loginNotice").classList.add("hidden");
-  if ($("introPanel")) $("introPanel").classList.add("hidden");
-  if ($("masterSearch")) $("masterSearch").classList.toggle("hidden", !isMaster);
-  $("summaryGrid").classList.remove("hidden");
-  $("searchToolbar").classList.remove("hidden");
-  $("contentGrid").classList.remove("hidden");
-  paintRegion(currentDd || "", Boolean(currentDd));
-  setStatus(currentQuarterLabel() + (isMaster ? " · 마스터" : " · " + currentDd) + (currentDd ? " · " + currentDd + " 조회 중" : " · 전체 검색 대기"));
-  doSearch();
+  renderDetail(visibleRows.find((r) => r._id === selectedId));
 }
 
 function enter() {
   try {
     const dd = selectedLoginDd;
-    const code = $("codeInput").value;
-    const mode = validateRegion(dd, code);
-    if (mode !== "master" && !dd) throw new Error("지역을 먼저 선택하세요.");
-    openSession(dd, mode === "master");
+    const mode = validateRegion(dd, $("codeInput").value);
+    isMaster = mode === "master";
+    currentDd = dd;
+    paintRegion(dd, true);
+    $("loginToolbar").classList.add("hidden");
+    $("loginNotice").classList.add("hidden");
+    $("summaryGrid").classList.remove("hidden");
+    $("searchToolbar").classList.remove("hidden");
+    $("contentGrid").classList.remove("hidden");
+    setStatus(isMaster ? currentQuarter + " · 마스터 · " + dd + " 조회 중" : currentQuarter + " · " + dd + " 접속 중");
+    doSearch();
   } catch (err) {
-    alert(err.message || String(err));
+    setStatus(err.message || String(err));
   }
 }
 
 function logout() {
   currentDd = null;
+  currentQuarterData = currentQuarterData || getQuarterEntries()[0].data;
   isMaster = false;
-  selectedPersonKey = null;
+  selectedId = null;
   $("codeInput").value = "";
-  getSearchInput().value = "";
-  if (getSuperInput()) getSuperInput().value = "";
+  $("qInput").value = "";
   $("loginToolbar").classList.remove("hidden");
   $("loginNotice").classList.remove("hidden");
-  if ($("introPanel")) $("introPanel").classList.remove("hidden");
-  if ($("masterSearch")) $("masterSearch").classList.add("hidden");
   $("summaryGrid").classList.add("hidden");
   $("searchToolbar").classList.add("hidden");
   $("contentGrid").classList.add("hidden");
-  fillRegionsForQuarter();
+  paintRegion(selectedLoginDd, false);
+  updateSelectedRegion();
   setStatus("지역 선택 대기");
 }
 
 $("enterBtn").addEventListener("click", enter);
 $("codeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") enter(); });
-if ($("qInput")) $("qInput").addEventListener("input", doSearch);
-if ($("qInputInline")) $("qInputInline").addEventListener("input", doSearch);
-if ($("superInput")) $("superInput").addEventListener("input", () => {
-  selectedPersonKey = null;
-  doSearch();
-});
-if ($("superResetBtn")) $("superResetBtn").addEventListener("click", () => {
-  if (getSuperInput()) getSuperInput().value = "";
-  selectedPersonKey = null;
-  doSearch();
-});
-if ($("brandHome")) $("brandHome").addEventListener("click", brandHome);
-$("resetBtn").addEventListener("click", () => { getSearchInput().value = ""; doSearch(); });
+$("qInput").addEventListener("input", doSearch);
+$("resetBtn").addEventListener("click", () => { $("qInput").value = ""; doSearch(); });
 $("logoutBtn").addEventListener("click", logout);
 
-window.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
-    const code = prompt("마스터 암호");
-    if (!code) return;
-    try {
-      if (norm(code) !== norm(MASTER_KEY)) throw new Error("마스터 암호가 아닙니다.");
-      openSession(selectedLoginDd, true);
-    } catch (err) {
-      alert(err.message || String(err));
+
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey && event.shiftKey && (event.key === "M" || event.key === "m")) {
+    event.preventDefault();
+    const input = prompt("마스터키 입력");
+    if (input === null) return;
+    if (norm(input) !== norm(MASTER_KEY)) {
+      setStatus("마스터키가 틀립니다.");
+      return;
     }
+    if (!dataObj || !currentQuarterData) {
+      setStatus("데이터 로드 후 다시 시도하세요.");
+      return;
+    }
+    isMaster = true;
+    currentDd = selectedLoginDd;
+    selectedId = null;
+    $("loginToolbar").classList.add("hidden");
+    $("loginNotice").classList.add("hidden");
+    $("summaryGrid").classList.remove("hidden");
+    $("searchToolbar").classList.remove("hidden");
+    $("contentGrid").classList.remove("hidden");
+    paintRegion(currentDd, true);
+    setStatus(currentQuarter + " · 마스터 · " + currentDd + " 조회 중");
+    doSearch();
   }
 });
 
-loadData().catch((err) => {
-  console.error(err);
-  setStatus("데이터 로드 실패");
-  alert(err.message || String(err));
-});
+loadData().catch((err) => setStatus("데이터 로드 실패: " + (err.message || err)));
+
