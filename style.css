@@ -9,8 +9,8 @@ body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); 
 button, input, select { font: inherit; }
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
 .sidebar { background: #111827; color: #e5e7eb; padding: 22px 18px; }
-.brand { display: flex; gap: 10px; align-items: center; margin-bottom: 28px; }
-.brand-mark { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: #fff; overflow: hidden; }
+.brand { width: 100%; display: flex; gap: 10px; align-items: center; margin-bottom: 28px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.brand-mark { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: #111827; overflow: hidden; }
 .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .brand strong { display: block; font-size: 15px; }
 .brand span { display: block; color: #9ca3af; font-size: 12px; margin-top: 2px; }
@@ -124,6 +124,7 @@ tr.avg-row td { background: #f8fbff; font-weight: 700; }
 .region-option:hover { background: rgba(255,255,255,.08); }
 .region-option.active { background: #2563eb; border-color: #2563eb; color: #fff; }
 .region-option:disabled { opacity: .42; cursor: default; }
+.region-option.hidden { display: none; }
 .selected-region-card strong small {
   display: block;
   margin-top: 4px;
