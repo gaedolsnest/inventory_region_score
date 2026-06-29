@@ -39,7 +39,10 @@ const fmtDelta = (v, empty = "N/A") => {
   if (Math.abs(v) < 0.005) return "0.00";
   return (v > 0 ? "+" : "") + fmt2(v);
 };
-const personKey = (r) => norm((r.emp || r.name || "") + "|" + (r.pos || ""));
+const personKey = (r) => {
+  const emp = norm(r.emp);
+  return emp ? "emp:" + emp : "name:" + norm((r.name || "") + "|" + (r.pos || ""));
+};
 
 function noteInfo(item) {
   if (!item) return null;
