@@ -40,6 +40,8 @@ const fmtDelta = (v, empty = "N/A") => {
   return (v > 0 ? "+" : "") + fmt2(v);
 };
 const personKey = (r) => {
+  const alias = norm(r.person_alias || r.person_key);
+  if (alias) return "alias:" + alias;
   const emp = norm(r.emp);
   return emp ? "emp:" + emp : "name:" + norm((r.name || "") + "|" + (r.pos || ""));
 };
