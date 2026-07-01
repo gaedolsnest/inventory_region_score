@@ -128,6 +128,35 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .side-item.locked,
 .region-option:disabled { opacity: .38; cursor: default; }
+.region-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+.region-row.active:not(.locked) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.region-row.hidden { display: none; }
+.region-access {
+  display: none;
+  min-width: 58px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #111827, #2f3a4c);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(17,24,39,.16);
+}
+.region-row.active:not(.locked) .region-access {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.region-row.locked .region-access { display: none; }
 .main {
   min-width: 0;
   padding: 26px 30px 30px;
@@ -205,7 +234,7 @@ body .official-notice .notice-legend { color: #5f6b7a; }
 }
 .login-panel {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1.1fr);
+  grid-template-columns: minmax(260px, .95fr) minmax(260px, 1.05fr);
   gap: 12px;
   align-items: stretch;
   padding: 12px;
@@ -231,10 +260,7 @@ body .audit-event {
 .selected-region-card small,
 .selected-region-card strong small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; font-weight: 600; }
 .login-controls {
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  min-width: 96px;
+  display: none;
 }
 .login-controls .primary { min-width: 92px; }
 .scope-note { padding: 11px 12px; }
@@ -524,7 +550,8 @@ body .audit-event span { color: #667085; font-size: 12px; }
 .region-picker::-webkit-scrollbar { width: 8px; }
 .region-picker::-webkit-scrollbar-track { background: transparent; border-radius: 999px; }
 .region-picker::-webkit-scrollbar-thumb { background: rgba(148,163,184,.65); border-radius: 999px; }
-.region-option.hidden { display: none; }
+.region-option.hidden,
+.region-row.hidden { display: none; }
 .region-filter {
   width: 100%;
   border: 1px solid rgba(100,116,139,.22);

@@ -243,7 +243,12 @@ function fillRegionsForQuarter() {
   selectedLoginDd = currentDd ? (regions.includes(preferred) ? preferred : null) : null;
   updateSelectedRegion();
   const picker = $("regionPicker");
-  picker.innerHTML = regions.map((dd) => '<button class="region-option" type="button" role="option" data-region="' + dd + '">' + dd + '</button>').join("");
+  picker.innerHTML = regions.map((dd) =>
+    '<div class="region-row" data-region-row="' + dd + '">' +
+      '<button class="region-option" type="button" role="option" data-region="' + dd + '">' + dd + '</button>' +
+      '<button class="region-access" type="button" data-region-access="' + dd + '" aria-label="' + dd + ' 접속">접속</button>' +
+    '</div>'
+  ).join("");
   paintRegion(currentDd || selectedLoginDd || "", Boolean(currentDd));
   if ($("regionFilter")) {
     $("regionFilter").oninput = applyRegionFilter;
@@ -262,8 +267,17 @@ function fillRegionsForQuarter() {
       } else {
         paintRegion(selectedLoginDd, false);
         updateSelectedRegion();
-        if ($("enterBtn")) $("enterBtn").focus();
       }
+    });
+  });
+  picker.querySelectorAll("[data-region-access]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (currentDd && !isMaster) return;
+      selectedLoginDd = button.dataset.regionAccess;
+      paintRegion(selectedLoginDd, false);
+      updateSelectedRegion();
+      openLoginModal("region");
     });
   });
 }
@@ -279,16 +293,26 @@ function updateSelectedRegion() {
 
 function applyRegionFilter() {
   const query = norm($("regionFilter") ? $("regionFilter").value : "");
-  $("regionPicker").querySelectorAll("[data-region]").forEach((button) => {
-    button.classList.toggle("hidden", Boolean(query) && !norm(button.dataset.region).includes(query));
+  $("regionPicker").querySelectorAll("[data-region-row]").forEach((row) => {
+    row.classList.toggle("hidden", Boolean(query) && !norm(row.dataset.regionRow).includes(query));
   });
 }
 
 function paintRegion(region, locked) {
+  $("regionPicker").querySelectorAll("[data-region-row]").forEach((row) => {
+    const active = row.dataset.regionRow === region;
+    row.classList.toggle("active", active);
+    row.classList.toggle("locked", Boolean(locked && !isMaster));
+  });
   $("regionPicker").querySelectorAll("[data-region]").forEach((button) => {
     const active = button.dataset.region === region;
     button.classList.toggle("active", active);
     button.disabled = Boolean(locked && !isMaster && !active);
+  });
+  $("regionPicker").querySelectorAll("[data-region-access]").forEach((button) => {
+    const active = button.dataset.regionAccess === region;
+    button.disabled = Boolean(locked && !isMaster);
+    button.classList.toggle("active", active);
   });
 }
 
