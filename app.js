@@ -25,6 +25,7 @@ let isMaster = false;
 let peopleRows = [];
 let selectedPersonKey = null;
 let expandedQuarterYears = new Set();
+let quarterTreeBootstrapped = false;
 
 const $ = (id) => document.getElementById(id);
 const norm = (s) => String(s || "").replace(/\s+/g, "").trim().toLowerCase();
@@ -151,7 +152,10 @@ function shortYearLabel(year) {
 
 function ensureQuarterYearExpanded() {
   const year = quarterYear(currentQuarter);
-  if (year) expandedQuarterYears.add(year);
+  if (year && !quarterTreeBootstrapped) {
+    expandedQuarterYears.add(year);
+    quarterTreeBootstrapped = true;
+  }
 }
 
 function setCurrentQuarter(id) {
@@ -176,8 +180,10 @@ function fillQuarterControls() {
     return;
   }
   const currentYear = quarterYear(currentQuarter) || quarterYear(entries.at(-1).id);
-  if (!expandedQuarterYears.size && currentYear) expandedQuarterYears.add(currentYear);
-  if (currentYear) expandedQuarterYears.add(currentYear);
+  if (!quarterTreeBootstrapped && currentYear) {
+    expandedQuarterYears.add(currentYear);
+    quarterTreeBootstrapped = true;
+  }
 
   const groups = [];
   entries.forEach((q) => {
@@ -205,8 +211,11 @@ function fillQuarterControls() {
   }).join("");
 
   document.querySelectorAll("[data-quarter-year]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const year = btn.dataset.quarterYear;
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const year = String(btn.getAttribute("data-quarter-year") || "");
+      if (!year) return;
       if (expandedQuarterYears.has(year)) expandedQuarterYears.delete(year);
       else expandedQuarterYears.add(year);
       fillQuarterControls();
@@ -390,11 +399,11 @@ function buildPeopleRows() {
   });
 
   peopleRows.sort((a, b) => {
-    const d = (a.currentAvg ?? 999) - (b.currentAvg ?? 999);
-    if (d) return d;
-    const avgD = (a.avgDelta ?? 0) - (b.avgDelta ?? 0);
-    if (avgD) return avgD;
-    return a.name.localeCompare(b.name, "ko");
+    const storeD = String(a.store || "").localeCompare(String(b.store || ""), "ko");
+    if (storeD) return storeD;
+    const nameD = a.name.localeCompare(b.name, "ko");
+    if (nameD) return nameD;
+    return (a.currentAvg ?? 999) - (b.currentAvg ?? 999);
   });
 }
 
@@ -552,6 +561,8 @@ function logout() {
 
 function resetHome() {
   if (!dataObj) return;
+  expandedQuarterYears = new Set();
+  quarterTreeBootstrapped = false;
   setCurrentQuarter(defaultQuarterId());
   fillQuarterControls();
   currentDd = null;

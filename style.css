@@ -504,12 +504,12 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   background: rgba(232, 242, 255, .58);
   color: #1f2937;
   cursor: pointer;
-  font-weight: 850;
+  font-weight: 500;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.36);
 }
 .quarter-year-toggle:hover { background: rgba(255,255,255,.58); }
 .quarter-year-toggle span { display: inline-flex; align-items: center; gap: 8px; }
-.quarter-year-toggle small { color: #667085; font-size: 11px; font-weight: 850; }
+.quarter-year-toggle small { color: #667085; font-size: 11px; font-weight: 500; }
 .quarter-year-toggle.open { background: rgba(224, 239, 255, .74); }
 .chevron {
   width: 7px;
@@ -529,7 +529,7 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   border-left: 1px solid rgba(100,116,139,.18);
 }
 .quarter-children.collapsed { display: none; }
-.side-item.quarter-item { min-height: 34px; padding: 7px 10px; font-size: 13px; font-weight: 800; }
+.side-item.quarter-item { min-height: 34px; padding: 7px 10px; font-size: 13px; font-weight: 500; }
 body .trend-chip.current-quarter {
   border-color: rgba(37,99,235,.46);
   background: linear-gradient(180deg, rgba(37,99,235,.88), rgba(17,24,39,.88));
@@ -583,3 +583,27 @@ tbody tr:hover { background: rgba(232,242,255,.70); }
   border: 1px solid rgba(17,24,39,.08);
 }
 .brand-mark img { object-fit: contain; }
+
+
+/* Tune sidebar typography: Apple-like clarity over heavy bold. */
+.side-label { font-weight: 600; letter-spacing: 0; }
+.quarter-year-toggle { font-weight: 500; }
+.quarter-year-toggle small { font-weight: 500; }
+.side-item.quarter-item { font-weight: 500; }
+.region-option { font-weight: 500; }
+.region-option.active { font-weight: 650; }
+.brand strong { font-weight: 700; }
+.brand span { font-weight: 500; }
+
+
+/* Final sidebar weight pass: keep labels crisp, not heavy. */
+.quarter-year-toggle,
+.quarter-year-toggle span,
+.side-item.quarter-item,
+.side-item.quarter-item.active {
+  font-weight: 500 !important;
+}
+.quarter-year-toggle small {
+  font-weight: 500 !important;
+}
+
