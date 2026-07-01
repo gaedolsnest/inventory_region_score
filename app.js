@@ -64,6 +64,22 @@ function noteBadge(item) {
   return '<em class="note-badge ' + info.type + '" title="' + title + '">' + info.label + '</em>';
 }
 
+function isHandoverRow(row) {
+  const info = noteInfo(row);
+  if (info?.type === "handover") return true;
+  const records = Array.isArray(row?.records) ? row.records : [];
+  return records.length > 0 && records.every((rec) => noteInfo(rec)?.type === "handover");
+}
+
+function eventMeta(row) {
+  const info = noteInfo(row);
+  const regionText = row.dd || "";
+  const dateText = "조사일자 " + rowDate(row);
+  if (info?.type === "handover") return [regionText, "당시 조사지역", dateText].filter(Boolean).join(" · ");
+  if (info?.type === "replacement") return [regionText, "정기 대체", dateText].filter(Boolean).join(" · ");
+  return [regionText, dateText].filter(Boolean).join(" · ");
+}
+
 function getSearchInput() {
   return $("qInputInline") || $("qInput");
 }
@@ -384,7 +400,7 @@ function scoreOf(row) {
 
 function buildPeopleRows() {
   const query = norm(getSearchInput().value);
-  const currentRows = rowsForQuarter(currentQuarter).filter((r) => r.dd === currentDd);
+  const currentRows = rowsForQuarter(currentQuarter).filter((r) => r.dd === currentDd && !isHandoverRow(r));
   const allowedKeys = new Set(currentRows.map(personKey));
   const historyByPerson = groupByPerson(rowsThroughSelectedQuarter().filter((r) => allowedKeys.has(personKey(r))));
   const currentByPerson = groupByPerson(currentRows);
@@ -533,7 +549,7 @@ function renderDetail(person) {
     '<div class="detail-title">\ucd5c\uadfc \ud3c9\uac00 \ud750\ub984</div>' +
     '<div class="trend-row">' + trend.map((t) => '<div class="trend-chip ' + (t.id === currentQuarter ? "current-quarter" : "") + '" title="' + (t.id === currentQuarter ? "\uc120\ud0dd\ud55c \ubd84\uae30" : "") + '"><span>' + t.label + '</span><strong class="' + scoreClass(t.value) + '">' + fmt2(t.value) + '</strong></div>').join("") + '</div>' +
     '<div class="detail-title">\uc810\ud3ec / \uc9c0\uc5ed \uc774\ub3d9 \uc774\ub825</div>' +
-    '<div class="timeline">' + events.map((r) => '<div class="audit-event ' + (r._quarterId === currentQuarter ? "current-quarter" : "") + '"><strong>' + r._quarterLabel + ' \u00b7 ' + (r.store || "") + ' \u00b7 ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + (r.dd || "") + ' \u00b7 \uc870\uc0ac\uc77c\uc790 ' + rowDate(r) + '</span></div>').join("") + '</div>' +
+    '<div class="timeline">' + events.map((r) => '<div class="audit-event ' + (r._quarterId === currentQuarter ? "current-quarter" : "") + (isHandoverRow(r) ? " handover-event" : "") + '"><strong>' + r._quarterLabel + ' \u00b7 ' + (r.store || "") + ' \u00b7 ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + eventMeta(r) + '</span></div>').join("") + '</div>' +
     '<p class="notice">\uc120\ud0dd\ud55c \ubd84\uae30 \uc774\ud6c4\uc758 \ubbf8\ub798 \ub370\uc774\ud130\ub294 \ud45c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. 2025\ub144 \uc774\ud6c4 \uc790\ub8cc\ub294 \ucc38\uace0 \uc544\uce74\uc774\ube59 \uae30\uc900\uc785\ub2c8\ub2e4.</p>';
 }
 
