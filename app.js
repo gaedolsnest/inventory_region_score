@@ -26,6 +26,7 @@ let peopleRows = [];
 let selectedPersonKey = null;
 let expandedQuarterYears = new Set();
 let quarterTreeBootstrapped = false;
+let loginModalMode = "region";
 
 const $ = (id) => document.getElementById(id);
 const norm = (s) => String(s || "").replace(/\s+/g, "").trim().toLowerCase();
@@ -261,7 +262,7 @@ function fillRegionsForQuarter() {
       } else {
         paintRegion(selectedLoginDd, false);
         updateSelectedRegion();
-        if ($("codeInput")) $("codeInput").focus();
+        if ($("enterBtn")) $("enterBtn").focus();
       }
     });
   });
@@ -270,11 +271,10 @@ function fillRegionsForQuarter() {
 function updateSelectedRegion() {
   const manager = regionManager(selectedLoginDd);
   $("selectedRegionName").innerHTML = selectedLoginDd ? selectedLoginDd + (manager ? '<small>(' + manager + ')</small>' : "") : "지역을 선택하세요";
-  if ($("codeInput")) {
-    $("codeInput").disabled = !selectedLoginDd;
-    $("codeInput").placeholder = selectedLoginDd ? "지역 암호 입력" : "지역을 먼저 선택하세요";
+  if ($("enterBtn")) {
+    $("enterBtn").disabled = !selectedLoginDd;
+    $("enterBtn").textContent = selectedLoginDd ? "접속" : "지역 선택";
   }
-  if ($("enterBtn")) $("enterBtn").disabled = !selectedLoginDd;
 }
 
 function applyRegionFilter() {
@@ -293,9 +293,9 @@ function paintRegion(region, locked) {
 }
 
 function validateRegion(dd, code) {
+  if (norm(code) === norm(MASTER_KEY)) return "master";
   const expected = norm(currentQuarterData.regions[dd]);
   if (!expected) throw new Error("지역 정보가 없습니다.");
-  if (norm(code) === norm(MASTER_KEY)) return "master";
   if (norm(code) !== expected) throw new Error("지역/암호가 틀립니다.");
   return "region";
 }
@@ -521,33 +521,93 @@ function selectPerson(key) {
   renderDetail(selected);
 }
 
-function enter() {
+function firstRegionForQuarter() {
+  if (!currentQuarterData || !currentQuarterData.regions) return "";
+  return Object.keys(currentQuarterData.regions || {}).sort((a, b) => a.localeCompare(b, "ko"))[0] || "";
+}
+
+function openLoginModal(mode = "region") {
+  if (!dataObj || !currentQuarterData) {
+    alert("데이터 로드가 끝난 뒤 다시 시도하세요.");
+    return;
+  }
+  loginModalMode = mode;
+  if (mode === "region" && !selectedLoginDd) {
+    setStatus("지역 선택 대기");
+    alert("왼쪽 지역 목록에서 접속할 지역을 먼저 선택하세요.");
+    return;
+  }
+  const modal = $("loginModal");
+  const input = $("modalCodeInput");
+  const region = selectedLoginDd || currentDd || firstRegionForQuarter();
+  if ($("loginModalEyebrow")) $("loginModalEyebrow").textContent = mode === "master" ? "마스터 접속" : "지역 접속";
+  if ($("loginModalTitle")) $("loginModalTitle").textContent = mode === "master" ? "마스터 암호 입력" : region + " 암호 입력";
+  if ($("loginModalDesc")) {
+    $("loginModalDesc").textContent = mode === "master"
+      ? "마스터 암호로 접속하면 지역 목록에서 다른 지역을 바로 전환할 수 있습니다."
+      : "선택한 지역의 암호를 입력하면 해당 지역 점장 목록이 표시됩니다.";
+  }
+  if (input) input.value = "";
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  window.setTimeout(() => input && input.focus(), 30);
+}
+
+function closeLoginModal() {
+  const modal = $("loginModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  if ($("modalCodeInput")) $("modalCodeInput").value = "";
+}
+
+function completeLogin(dd) {
+  currentDd = dd;
+  selectedLoginDd = dd;
+  selectedPersonKey = null;
+  paintRegion(dd, true);
+  updateSelectedRegion();
+  closeLoginModal();
+  $("loginToolbar").classList.add("hidden");
+  $("loginNotice").classList.add("hidden");
+  if ($("introPanel")) $("introPanel").classList.add("hidden");
+  $("summaryGrid").classList.remove("hidden");
+  $("searchToolbar").classList.remove("hidden");
+  $("contentGrid").classList.remove("hidden");
+  setStatus(currentQuarterLabel() + (isMaster ? " · 마스터 · " : " · ") + dd + " 조회 중");
+  doSearch();
+}
+
+function submitLoginModal() {
   try {
+    const code = $("modalCodeInput") ? $("modalCodeInput").value : "";
+    if (loginModalMode === "master") {
+      if (norm(code) !== norm(MASTER_KEY)) throw new Error("마스터 암호가 아닙니다.");
+      const dd = selectedLoginDd || currentDd || firstRegionForQuarter();
+      if (!dd) throw new Error("조회할 지역 정보가 없습니다.");
+      isMaster = true;
+      completeLogin(dd);
+      return;
+    }
     const dd = selectedLoginDd;
     if (!dd) throw new Error("지역을 먼저 선택하세요.");
-    const mode = validateRegion(dd, $("codeInput").value);
+    const mode = validateRegion(dd, code);
     isMaster = mode === "master";
-    currentDd = dd;
-    selectedPersonKey = null;
-    paintRegion(dd, true);
-    $("loginToolbar").classList.add("hidden");
-    $("loginNotice").classList.add("hidden");
-    if ($("introPanel")) $("introPanel").classList.add("hidden");
-    $("summaryGrid").classList.remove("hidden");
-    $("searchToolbar").classList.remove("hidden");
-    $("contentGrid").classList.remove("hidden");
-    setStatus(currentQuarterLabel() + (isMaster ? " · 마스터 · " : " · ") + dd + " 조회 중");
-    doSearch();
+    completeLogin(dd);
   } catch (err) {
     alert(err.message || String(err));
   }
+}
+
+function enter() {
+  openLoginModal("region");
 }
 
 function logout() {
   currentDd = null;
   isMaster = false;
   selectedPersonKey = null;
-  $("codeInput").value = "";
+  if ($("modalCodeInput")) $("modalCodeInput").value = "";
   getSearchInput().value = "";
   $("loginToolbar").classList.remove("hidden");
   $("loginNotice").classList.remove("hidden");
@@ -570,7 +630,7 @@ function resetHome() {
   selectedLoginDd = null;
   selectedPersonKey = null;
   peopleRows = [];
-  if ($("codeInput")) $("codeInput").value = "";
+  closeLoginModal();
   if ($("qInput")) $("qInput").value = "";
   if ($("qInputInline")) $("qInputInline").value = "";
   if ($("regionFilter")) $("regionFilter").value = "";
@@ -586,7 +646,12 @@ function resetHome() {
 }
 
 $("enterBtn").addEventListener("click", enter);
-$("codeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") enter(); });
+if ($("masterAccessBtn")) $("masterAccessBtn").addEventListener("click", () => openLoginModal("master"));
+if ($("loginModalSubmit")) $("loginModalSubmit").addEventListener("click", submitLoginModal);
+if ($("modalCodeInput")) $("modalCodeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") submitLoginModal(); });
+if ($("loginModalClose")) $("loginModalClose").addEventListener("click", closeLoginModal);
+if ($("loginModalCancel")) $("loginModalCancel").addEventListener("click", closeLoginModal);
+if ($("loginModal")) $("loginModal").addEventListener("click", (e) => { if (e.target === $("loginModal")) closeLoginModal(); });
 if ($("qInput")) $("qInput").addEventListener("input", doSearch);
 if ($("qInputInline")) $("qInputInline").addEventListener("input", doSearch);
 $("resetBtn").addEventListener("click", () => { getSearchInput().value = ""; doSearch(); });
@@ -594,27 +659,12 @@ $("logoutBtn").addEventListener("click", logout);
 if ($("brandHome")) $("brandHome").addEventListener("click", resetHome);
 
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("loginModal") && !$("loginModal").classList.contains("hidden")) {
+    closeLoginModal();
+    return;
+  }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
-    const code = prompt("마스터 암호");
-    if (!code) return;
-    try {
-      const mode = validateRegion(selectedLoginDd, code);
-      if (mode !== "master") throw new Error("마스터 암호가 아닙니다.");
-      isMaster = true;
-      currentDd = selectedLoginDd;
-      selectedPersonKey = null;
-      $("loginToolbar").classList.add("hidden");
-      $("loginNotice").classList.add("hidden");
-      if ($("introPanel")) $("introPanel").classList.add("hidden");
-      $("summaryGrid").classList.remove("hidden");
-      $("searchToolbar").classList.remove("hidden");
-      $("contentGrid").classList.remove("hidden");
-      paintRegion(currentDd, true);
-      setStatus(currentQuarterLabel() + " · 마스터 · " + currentDd + " 조회 중");
-      doSearch();
-    } catch (err) {
-      alert(err.message || String(err));
-    }
+    openLoginModal("master");
   }
 });
 

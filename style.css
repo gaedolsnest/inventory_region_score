@@ -139,6 +139,13 @@ button { -webkit-tap-highlight-color: transparent; }
   gap: 16px;
   margin-bottom: 17px;
 }
+.top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
 h1 {
   margin: 0;
   font-size: 27px;
@@ -198,7 +205,7 @@ body .official-notice .notice-legend { color: #5f6b7a; }
 }
 .login-panel {
   display: grid;
-  grid-template-columns: 260px minmax(260px, 420px) 1fr;
+  grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1.1fr);
   gap: 12px;
   align-items: stretch;
   padding: 12px;
@@ -223,7 +230,13 @@ body .audit-event {
 .selected-region-card strong { display: block; font-size: 20px; color: #111827; }
 .selected-region-card small,
 .selected-region-card strong small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; font-weight: 600; }
-.login-controls { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-content: center; }
+.login-controls {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-width: 96px;
+}
+.login-controls .primary { min-width: 92px; }
 .scope-note { padding: 11px 12px; }
 .scope-note span { color: #344054; font-size: 13px; line-height: 1.45; }
 .toolbar.search { grid-template-columns: 1fr auto auto; }
@@ -266,6 +279,81 @@ input::placeholder { color: #98a2b3; }
   color: #1f2937;
 }
 .secondary:hover { background: rgba(255,255,255,.84); }
+.master-access {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-weight: 700;
+  background: rgba(255,255,255,.54);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(15, 23, 42, .34);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.modal-card {
+  width: min(420px, 100%);
+  border: 1px solid rgba(255,255,255,.68);
+  border-radius: 12px;
+  padding: 18px;
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 28px 80px rgba(15,23,42,.24);
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.modal-head span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+.modal-head h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  line-height: 1.22;
+  letter-spacing: 0;
+}
+.modal-close {
+  border: 1px solid rgba(100,116,139,.20);
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: rgba(255,255,255,.64);
+  color: #4b5563;
+  cursor: pointer;
+}
+.modal-card p {
+  margin: 0 0 14px;
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.modal-label {
+  display: block;
+  margin: 0 0 7px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 14px;
+}
+.modal-actions .primary,
+.modal-actions .secondary { min-width: 78px; }
 .summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -469,6 +557,7 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   .region-picker { max-height: 210px; }
   .main { padding: 16px; }
   .topbar { align-items: flex-start; flex-direction: column; }
+  .top-actions { align-items: flex-start; justify-content: flex-start; width: 100%; }
   .toolbar,
   .toolbar.search,
   .login-panel,
@@ -476,6 +565,7 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   .content { grid-template-columns: 1fr; }
   .detail-card { position: static; }
   .session { display: none; }
+  .master-access { display: inline-flex; align-items: center; min-height: 36px; }
   .table-wrap { max-height: 55vh; }
   .card-head.with-filter { align-items: flex-start; flex-direction: column; }
   .card-filter { width: 100%; }
@@ -486,6 +576,9 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   body .person-insights,
   body .intro-grid { grid-template-columns: 1fr; }
   h1 { font-size: 23px; }
+  .login-controls .primary { width: 100%; }
+  .modal-backdrop { align-items: end; padding: 12px; }
+  .modal-card { border-radius: 12px; padding: 16px; }
   .metric { min-height: auto; }
 }
 

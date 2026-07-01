@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>정기 재고조사 점수조회 - 누적 미리보기</title>
-  <link rel="icon" type="image/svg+xml" href="favicon-black.svg?v=q2_tree_weight_fix_20260701_1" />
-  <link rel="alternate icon" href="favicon-black.ico?v=q2_tree_weight_fix_20260701_1" />
-  <link rel="stylesheet" href="style.css?v=q2_tree_weight_fix_20260701_1" />
+  <link rel="icon" type="image/svg+xml" href="favicon-black.svg?v=q2_modal_login_20260701_1" />
+  <link rel="alternate icon" href="favicon-black.ico?v=q2_modal_login_20260701_1" />
+  <link rel="stylesheet" href="style.css?v=q2_modal_login_20260701_1" />
   <style>
     .official-notice{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #bfd4ff;border-left:4px solid #2563eb;border-radius:8px;padding:13px 15px;margin:0 0 16px;color:#1e293b;font-size:14px;line-height:1.45}
     .official-notice strong{color:#1d4ed8;white-space:nowrap}
@@ -54,7 +54,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <button class="brand" id="brandHome" type="button" title="처음 화면">
-        <div class="brand-mark"><img src="abc-mart-black.svg?v=q2_tree_weight_fix_20260701_1" alt="" /></div><div><strong>정기 재고조사</strong><span>지역별 점수조회</span></div>
+        <div class="brand-mark"><img src="abc-mart-black.svg?v=q2_modal_login_20260701_1" alt="" /></div><div><strong>정기 재고조사</strong><span>지역별 점수조회</span></div>
       </button>
       <div class="side-label">분기</div>
       <div class="side-list" id="quarterSide"></div>
@@ -69,7 +69,10 @@
           <h1>정기 재고조사 점수조회</h1>
           <p class="subtitle">분기를 선택하면 해당 시점 기준 지역 점장 목록과 누적 평가 흐름을 조회합니다.</p>
         </div>
-        <div class="session" id="sessionBadge"><span class="dot"></span> 데이터 로드 중</div>
+        <div class="top-actions">
+          <button class="secondary master-access" id="masterAccessBtn" type="button">마스터 접속</button>
+          <div class="session" id="sessionBadge"><span class="dot"></span> 데이터 로드 중</div>
+        </div>
       </header>
 
       <div class="official-notice">
@@ -99,15 +102,14 @@
           <small>왼쪽 지역 목록에서 접속할 지역을 선택하세요.</small>
         </div>
         <div class="login-controls">
-          <input id="codeInput" type="password" placeholder="지역을 먼저 선택하세요" disabled />
           <button class="primary" id="enterBtn" type="button" disabled>접속</button>
         </div>
         <div class="scope-note">
           <strong>표시 범위</strong>
-          <span>지역을 선택하고 암호를 입력하면 해당 지역 점장 목록과 누적 평가 흐름이 표시됩니다.</span>
+          <span>지역을 선택한 뒤 접속 버튼을 누르면 암호 입력 창이 열립니다.</span>
         </div>
       </section>
-      <p class="notice" id="loginNotice">왼쪽에서 지역을 선택한 뒤 지역 암호를 입력하세요.</p>
+      <p class="notice" id="loginNotice">왼쪽에서 지역을 선택한 뒤 접속 버튼을 누르세요.</p>
 
       <section class="master-search hidden" id="masterSearch">
         <div>
@@ -160,6 +162,25 @@
     </main>
   </div>
 
-  <script src="app.js?v=q2_tree_weight_fix_20260701_1"></script>
+  <div class="modal-backdrop hidden" id="loginModal" aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+      <div class="modal-head">
+        <div>
+          <span id="loginModalEyebrow">지역 접속</span>
+          <h2 id="loginModalTitle">지역 암호 입력</h2>
+        </div>
+        <button class="modal-close" id="loginModalClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <p id="loginModalDesc">선택한 지역의 암호를 입력하세요.</p>
+      <label class="modal-label" for="modalCodeInput">비밀번호</label>
+      <input id="modalCodeInput" type="password" autocomplete="current-password" placeholder="암호 입력" />
+      <div class="modal-actions">
+        <button class="secondary" id="loginModalCancel" type="button">취소</button>
+        <button class="primary" id="loginModalSubmit" type="button">접속</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js?v=q2_modal_login_20260701_1"></script>
 </body>
 </html>
