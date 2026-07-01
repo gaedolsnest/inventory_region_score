@@ -311,7 +311,7 @@ function paintRegion(region, locked) {
   $("regionPicker").querySelectorAll("[data-region-row]").forEach((row) => {
     const active = row.dataset.regionRow === region;
     row.classList.toggle("active", active);
-    row.classList.toggle("locked", Boolean(locked && !isMaster));
+    row.classList.toggle("locked", Boolean(locked && (!isMaster || active)));
   });
   $("regionPicker").querySelectorAll("[data-region]").forEach((button) => {
     const active = button.dataset.region === region;
