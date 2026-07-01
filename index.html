@@ -4,57 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>정기 재고조사 점수조회 - 누적 미리보기</title>
-  <link rel="icon" type="image/svg+xml" href="favicon-black.svg?v=q2_inline_region_access_20260701_2" />
-  <link rel="alternate icon" href="favicon-black.ico?v=q2_inline_region_access_20260701_2" />
-  <link rel="stylesheet" href="style.css?v=q2_inline_region_access_20260701_2" />
-  <style>
-    .official-notice{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #bfd4ff;border-left:4px solid #2563eb;border-radius:8px;padding:13px 15px;margin:0 0 16px;color:#1e293b;font-size:14px;line-height:1.45}
-    .official-notice strong{color:#1d4ed8;white-space:nowrap}
-    .official-notice .notice-copy{display:grid;gap:4px}
-    .official-notice .notice-legend{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;color:#475569;font-size:12px}
-    .legend-badge{display:inline-flex;align-items:center;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;white-space:nowrap}
-    .legend-badge.handover{background:#dbeafe;color:#1d4ed8}
-    .legend-badge.replacement{background:#ffedd5;color:#c2410c}
-    .person-insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
-    .insight-card{border:1px solid #d8e1ee;border-radius:8px;padding:12px;background:#fff}
-    .insight-card span{display:block;color:#64748b;font-size:12px;margin-bottom:7px}
-    .insight-card strong{font-size:19px}
-    .up{color:#0f9f6e}.down{color:#dc2626}.warn{color:#b45309}.flat{color:#2563eb}
-    .detail-title{font-size:13px;font-weight:800;color:#334155;margin:16px 0 9px}
-    .trend-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px}
-    .trend-chip{border:1px solid #d8e1ee;border-radius:8px;padding:9px 7px;text-align:center;background:#fbfdff}
-    .trend-chip span{display:block;color:#64748b;font-size:11px;margin-bottom:5px}
-    .trend-chip strong{font-size:15px}
-    .timeline{border-left:2px solid #dbe4f0;margin-left:8px;padding-left:14px}
-    .audit-event{position:relative;border:1px solid #d8e1ee;border-radius:8px;padding:10px 11px;margin-bottom:8px;background:#fff}
-    .audit-event:before{content:"";position:absolute;left:-20px;top:16px;width:9px;height:9px;border-radius:50%;background:#2563eb}
-    .audit-event strong{display:block;font-size:13px}
-    .audit-event span{color:#64748b;font-size:12px}
-    .metric small{display:block;margin-top:5px;color:#64748b;font-size:12px;font-weight:700}
-    .metric small.good{color:#0f9f6e}.metric small.bad{color:#dc2626}.metric small.warn{color:#b45309}
-    #logoutBtn{display:none}
-    #searchToolbar{display:none!important}
-    .card-filter{width:240px;border:1px solid #d8e1ee;border-radius:8px;padding:9px 11px;font-size:13px;background:#fff}
-    .card-head.with-filter{gap:12px}
-    .card-head.with-filter strong{white-space:nowrap}
-    .region-filter{width:100%;border:1px solid rgba(100,116,139,.22);background:rgba(255,255,255,.58);color:#111827;border-radius:8px;padding:10px 11px;font-size:13px;margin-bottom:8px;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
-    .region-filter::placeholder{color:#98a2b3}
-    .intro-panel{background:#fff;border:1px solid #d8e1ee;border-radius:8px;padding:18px;margin:0 0 16px}
-    .intro-panel h2{margin:0 0 10px;font-size:18px;letter-spacing:0;color:#0f172a}
-    .intro-panel p{margin:0 0 12px;color:#475569;font-size:14px;line-height:1.55}
-    .intro-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
-    .intro-item{border:1px solid #e1e8f2;border-radius:8px;padding:12px;background:#f8fbff}
-    .intro-item span{display:block;color:#64748b;font-size:12px;margin-bottom:6px}
-    .intro-item strong{font-size:14px;color:#0f172a}
-    @media (max-width: 900px){.intro-grid{grid-template-columns:1fr}}
-    @media (max-width: 900px){.card-head.with-filter{align-items:flex-start;flex-direction:column}.card-filter{width:100%}}
-  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon-black.svg?v=q2_clean_intro_legend_20260701_1" />
+  <link rel="alternate icon" href="favicon-black.ico?v=q2_clean_intro_legend_20260701_1" />
+  <link rel="stylesheet" href="style.css?v=q2_clean_intro_legend_20260701_1" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <button class="brand" id="brandHome" type="button" title="처음 화면">
-        <div class="brand-mark"><img src="abc-mart-black.svg?v=q2_inline_region_access_20260701_2" alt="" /></div><div><strong>정기 재고조사</strong><span>지역별 점수조회</span></div>
+        <div class="brand-mark"><img src="abc-mart-black.svg?v=q2_clean_intro_legend_20260701_1" alt="" /></div><div><strong>정기 재고조사</strong><span>지역별 점수조회</span></div>
       </button>
       <div class="side-label">분기</div>
       <div class="side-list" id="quarterSide"></div>
@@ -76,22 +34,35 @@
       </header>
 
       <div class="official-notice">
-        <strong>조회 기준 안내</strong>
+        <strong>조회 기준</strong>
         <span class="notice-copy">
-          <span>선택한 분기의 조사 결과를 기준으로 조회됩니다.</span>
-          <span>2025년 이후 과거 자료는 점장별 점수 흐름을 참고하기 위한 아카이빙 데이터로 제공됩니다.</span>
-          <span class="notice-legend"><em class="legend-badge handover">인수인계</em> 별도 인수인계 재고조사 기록 <em class="legend-badge replacement">인수인계 대체</em> 정기 재고조사를 인수인계 재고조사로 대체한 건</span>
+          <span><b id="noticeQuarterLabel">선택한 분기</b> 결과만 현재 조회 기준으로 사용합니다.</span>
+          <span>선택 분기 이후 자료는 표시하지 않고, 2025년 이후 이력은 점장 흐름 확인용으로만 제공합니다.</span>
         </span>
       </div>
 
       <section class="intro-panel" id="introPanel">
-        <h2>정기 재고조사 기준 점수 조회</h2>
-        <p>본 페이지는 2026 Q1 정기 재고조사 결과를 기준으로 지역별 점장 평가 점수를 조회하는 화면입니다.</p>
-        <p>2025년 이후 과거 자료는 점장별 점수 흐름을 참고하기 위한 아카이빙 데이터로 제공되며, 선택한 분기 이후의 미래 데이터는 표시하지 않습니다.</p>
+        <div class="intro-copy">
+          <span>지역별 점수조회</span>
+          <h2 id="introTitle">접속할 지역을 선택하세요</h2>
+          <p id="introDesc">왼쪽 지역 목록에서 지역을 선택하면 해당 줄에 접속 버튼이 표시됩니다.</p>
+          <p>접속 후에는 선택 분기의 지역 점장 목록, 최근 점수, 누적 평가 흐름을 한 화면에서 확인할 수 있습니다.</p>
+        </div>
         <div class="intro-grid">
-          <div class="intro-item"><span>조회 기준</span><strong>2026 Q1 정기 재고조사</strong></div>
-          <div class="intro-item"><span>과거 자료</span><strong>2025년 이후 참고 아카이빙</strong></div>
-          <div class="intro-item"><span>조회 방식</span><strong>지역 선택 후 암호 접속</strong></div>
+          <div class="intro-item intro-item-primary"><span>조회 기준</span><strong id="introQuarterLabel">선택 분기</strong></div>
+          <div class="intro-item"><span>표시 범위</span><strong>선택 분기까지</strong></div>
+          <div class="intro-item"><span>접속 방식</span><strong>지역 줄의 접속 버튼</strong></div>
+        </div>
+      </section>
+
+      <section class="legend-panel" id="legendPanel">
+        <div class="legend-item">
+          <em class="legend-badge handover">인수인계</em>
+          <span>정기 조사와 별도로 기록된 인수인계 재고조사입니다.</span>
+        </div>
+        <div class="legend-item">
+          <em class="legend-badge replacement">인수인계 대체</em>
+          <span>정기 재고조사를 인수인계 재고조사로 대체한 건입니다.</span>
         </div>
       </section>
 
@@ -181,6 +152,6 @@
     </section>
   </div>
 
-  <script src="app.js?v=q2_inline_region_access_20260701_2"></script>
+  <script src="app.js?v=q2_clean_intro_legend_20260701_1"></script>
 </body>
 </html>

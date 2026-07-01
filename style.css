@@ -207,7 +207,8 @@ h1 {
 .detail-card,
 .master-search,
 body .official-notice,
-body .intro-panel {
+body .intro-panel,
+body .legend-panel {
   background: var(--panel);
   border: 1px solid rgba(255,255,255,.62);
   border-radius: 8px;
@@ -216,14 +217,18 @@ body .intro-panel {
   -webkit-backdrop-filter: var(--blur);
 }
 body .official-notice {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 13px;
+  align-items: start;
   border-left: 0;
-  padding: 14px 16px;
+  padding: 16px 18px;
   margin: 0 0 16px;
   color: #1f2937;
 }
 body .official-notice strong { color: #1d4ed8; }
-body .official-notice .notice-legend { color: #5f6b7a; }
+body .official-notice b { color: #111827; }
+body .official-notice .notice-copy { display: grid; gap: 7px; line-height: 1.52; }
 .toolbar {
   display: grid;
   grid-template-columns: 220px 1fr auto;
@@ -564,18 +569,98 @@ body .audit-event span { color: #667085; font-size: 12px; }
   outline: none;
 }
 .region-filter::placeholder { color: #98a2b3; }
-body .intro-panel { padding: 18px; margin: 0 0 16px; }
-body .intro-panel h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: 0; color: #111827; }
-body .intro-panel p { margin: 0 0 12px; color: #475467; font-size: 14px; line-height: 1.55; }
-body .intro-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-top: 14px; }
-body .intro-item { padding: 12px; }
-body .intro-item span { display: block; color: #667085; font-size: 12px; margin-bottom: 6px; }
-body .intro-item strong { font-size: 14px; color: #111827; }
+body .intro-panel {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.2fr) minmax(360px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 22px;
+  margin: 0 0 16px;
+}
+body .intro-copy {
+  display: grid;
+  align-content: center;
+  min-height: 150px;
+}
+body .intro-copy > span {
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+body .intro-panel h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 1.24;
+  letter-spacing: 0;
+  color: #111827;
+}
+body .intro-panel p {
+  max-width: 760px;
+  margin: 0 0 10px;
+  color: #475467;
+  font-size: 14px;
+  line-height: 1.62;
+}
+body .intro-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+body .intro-item {
+  display: grid;
+  align-content: center;
+  min-height: 58px;
+  padding: 14px 15px;
+}
+body .intro-item span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+body .intro-item strong {
+  font-size: 15px;
+  color: #111827;
+}
+body .intro-item-primary {
+  background: linear-gradient(135deg, rgba(239,246,255,.92), rgba(255,255,255,.62));
+  border-color: rgba(37,99,235,.22);
+}
+body .intro-item-primary strong {
+  color: #1d4ed8;
+  font-size: 18px;
+}
+body .legend-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  margin: -4px 0 16px;
+}
+body .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid rgba(120, 137, 158, .20);
+  border-radius: 8px;
+  background: rgba(255,255,255,.50);
+}
+body .legend-item span {
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.42;
+}
 #logoutBtn { display: none; }
 #searchToolbar { display: none !important; }
 @media (max-width: 1180px) {
   .content { grid-template-columns: minmax(0, 1fr) 340px; }
   .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body .intro-panel { grid-template-columns: 1fr; }
+  body .intro-copy { min-height: auto; }
+  body .intro-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 980px) {
   .app-shell { grid-template-columns: 1fr; }
@@ -585,6 +670,9 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   .main { padding: 16px; }
   .topbar { align-items: flex-start; flex-direction: column; }
   .top-actions { align-items: flex-start; justify-content: flex-start; width: 100%; }
+  body .official-notice { grid-template-columns: 1fr; }
+  body .intro-panel { padding: 18px; }
+  body .legend-panel { grid-template-columns: 1fr; }
   .toolbar,
   .toolbar.search,
   .login-panel,
@@ -603,6 +691,7 @@ body .intro-item strong { font-size: 14px; color: #111827; }
   body .person-insights,
   body .intro-grid { grid-template-columns: 1fr; }
   h1 { font-size: 23px; }
+  body .intro-panel h2 { font-size: 21px; }
   .login-controls .primary { width: 100%; }
   .modal-backdrop { align-items: end; padding: 12px; }
   .modal-card { border-radius: 12px; padding: 16px; }

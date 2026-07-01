@@ -105,7 +105,7 @@ async function loadData() {
   const res = await fetch(DATA_URL, { cache: "no-store" });
   if (!res.ok) throw new Error("webdata 로드 실패: " + res.status);
   dataObj = JSON.parse(await decryptBlob(await res.arrayBuffer()));
-  setCurrentQuarter(dataObj.defaultQuarter || "2026Q1");
+  setCurrentQuarter(defaultQuarterId());
   fillQuarterControls();
   fillRegionsForQuarter();
   setStatus("지역 선택 대기");
@@ -129,6 +129,14 @@ function formatQuarterLabel(id, label) {
 function currentQuarterLabel() {
   const data = dataObj && dataObj.quarters ? dataObj.quarters[currentQuarter] : null;
   return formatQuarterLabel(currentQuarter, data && data.label);
+}
+
+function updateQuarterCopy() {
+  if (!currentQuarter) return;
+  const label = currentQuarterLabel();
+  const fullLabel = label + " 정기 재고조사";
+  if ($("noticeQuarterLabel")) $("noticeQuarterLabel").textContent = fullLabel;
+  if ($("introQuarterLabel")) $("introQuarterLabel").textContent = fullLabel;
 }
 
 function quarterRank(id) {
@@ -164,6 +172,7 @@ function setCurrentQuarter(id) {
   currentQuarter = entry.id;
   currentQuarterData = entry.data;
   ensureQuarterYearExpanded();
+  updateQuarterCopy();
 }
 
 function defaultQuarterId() {
@@ -595,6 +604,7 @@ function completeLogin(dd) {
   $("loginToolbar").classList.add("hidden");
   $("loginNotice").classList.add("hidden");
   if ($("introPanel")) $("introPanel").classList.add("hidden");
+  if ($("legendPanel")) $("legendPanel").classList.add("hidden");
   $("summaryGrid").classList.remove("hidden");
   $("searchToolbar").classList.remove("hidden");
   $("contentGrid").classList.remove("hidden");
@@ -636,6 +646,7 @@ function logout() {
   $("loginToolbar").classList.remove("hidden");
   $("loginNotice").classList.remove("hidden");
   if ($("introPanel")) $("introPanel").classList.remove("hidden");
+  if ($("legendPanel")) $("legendPanel").classList.remove("hidden");
   $("summaryGrid").classList.add("hidden");
   $("searchToolbar").classList.add("hidden");
   $("contentGrid").classList.add("hidden");
@@ -661,6 +672,7 @@ function resetHome() {
   $("loginToolbar").classList.remove("hidden");
   $("loginNotice").classList.remove("hidden");
   if ($("introPanel")) $("introPanel").classList.remove("hidden");
+  if ($("legendPanel")) $("legendPanel").classList.remove("hidden");
   $("summaryGrid").classList.add("hidden");
   $("searchToolbar").classList.add("hidden");
   $("contentGrid").classList.add("hidden");
