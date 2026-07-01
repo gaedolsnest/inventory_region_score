@@ -24,6 +24,7 @@ let currentDd = null;
 let isMaster = false;
 let peopleRows = [];
 let selectedPersonKey = null;
+let expandedQuarterYears = new Set();
 
 const $ = (id) => document.getElementById(id);
 const norm = (s) => String(s || "").replace(/\s+/g, "").trim().toLowerCase();
@@ -50,13 +51,15 @@ function noteInfo(item) {
   if (!item) return null;
   const raw = String(item.note_raw || item.note || "").trim();
   const type = item.note_type || (raw.includes("대체") ? "replacement" : raw.includes("인수인계") ? "handover" : "");
-  const label = item.note || (type === "replacement" ? "대체" : type === "handover" ? "인수인계" : "");
+  const label = type === "replacement" ? "인수인계 대체" : type === "handover" ? "인수인계" : (item.note || "");
   return label ? { label, type } : null;
 }
 
 function noteBadge(item) {
   const info = noteInfo(item);
-  return info ? '<em class="note-badge ' + info.type + '">' + info.label + '</em>' : "";
+  if (!info) return "";
+  const title = info.type === "replacement" ? "정기 재고조사를 인수인계 재고조사로 대체한 건입니다." : info.type === "handover" ? "별도 인수인계 재고조사 기록입니다." : "";
+  return '<em class="note-badge ' + info.type + '" title="' + title + '">' + info.label + '</em>';
 }
 
 function getSearchInput() {
@@ -131,10 +134,31 @@ function quarterRank(id) {
   return m ? Number(m[1]) * 10 + Number(m[2]) : 0;
 }
 
+function quarterYear(id) {
+  const m = String(id || "").match(/(20\d{2})Q[1-4]/i);
+  return m ? m[1] : "";
+}
+
+function shortQuarterLabel(id, label) {
+  const source = String(label || id || "");
+  const match = source.match(/(20\d{2})\s*Q([1-4])/i) || String(id || "").match(/(20\d{2})Q([1-4])/i);
+  return match ? "Q" + match[2] : formatQuarterLabel(id, label);
+}
+
+function shortYearLabel(year) {
+  return year;
+}
+
+function ensureQuarterYearExpanded() {
+  const year = quarterYear(currentQuarter);
+  if (year) expandedQuarterYears.add(year);
+}
+
 function setCurrentQuarter(id) {
   const entry = quarterEntries().find((q) => q.id === id) || quarterEntries().at(-1);
   currentQuarter = entry.id;
   currentQuarterData = entry.data;
+  ensureQuarterYearExpanded();
 }
 
 function defaultQuarterId() {
@@ -146,18 +170,57 @@ function defaultQuarterId() {
 
 function fillQuarterControls() {
   const entries = quarterEntries();
-  $("quarterSide").innerHTML = entries.map((q) =>
-    '<button class="side-item ' + (q.id === currentQuarter ? "active" : "") + '" type="button" data-quarter="' + q.id + '">' + q.label + '</button>'
-  ).join("");
+  const side = $("quarterSide");
+  if (!entries.length) {
+    side.innerHTML = "";
+    return;
+  }
+  const currentYear = quarterYear(currentQuarter) || quarterYear(entries.at(-1).id);
+  if (!expandedQuarterYears.size && currentYear) expandedQuarterYears.add(currentYear);
+  if (currentYear) expandedQuarterYears.add(currentYear);
+
+  const groups = [];
+  entries.forEach((q) => {
+    const year = quarterYear(q.id) || "\uae30\ud0c0";
+    let group = groups.find((item) => item.year === year);
+    if (!group) {
+      group = { year, entries: [] };
+      groups.push(group);
+    }
+    group.entries.push(q);
+  });
+  groups.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
+
+  side.innerHTML = groups.map((group) => {
+    const open = expandedQuarterYears.has(group.year);
+    const children = group.entries.map((q) =>
+      '<button class="side-item quarter-item ' + (q.id === currentQuarter ? "active" : "") + '" type="button" data-quarter="' + q.id + '" title="' + q.label + '">' + shortQuarterLabel(q.id, q.label) + '</button>'
+    ).join("");
+    return '<div class="quarter-year">' +
+      '<button class="quarter-year-toggle ' + (open ? "open" : "") + '" type="button" data-quarter-year="' + group.year + '" aria-expanded="' + (open ? "true" : "false") + '">' +
+        '<span><i class="chevron"></i>' + shortYearLabel(group.year) + '</span>' +
+      '</button>' +
+      '<div class="quarter-children ' + (open ? "" : "collapsed") + '">' + children + '</div>' +
+    '</div>';
+  }).join("");
+
+  document.querySelectorAll("[data-quarter-year]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const year = btn.dataset.quarterYear;
+      if (expandedQuarterYears.has(year)) expandedQuarterYears.delete(year);
+      else expandedQuarterYears.add(year);
+      fillQuarterControls();
+    });
+  });
   document.querySelectorAll("[data-quarter]").forEach((btn) => {
     btn.addEventListener("click", () => {
       setCurrentQuarter(btn.dataset.quarter);
-      document.querySelectorAll("[data-quarter]").forEach((b) => b.classList.toggle("active", b === btn));
+      fillQuarterControls();
       fillRegionsForQuarter();
       if (currentDd) {
         selectedPersonKey = null;
         paintRegion(currentDd, true);
-        setStatus(currentQuarterLabel() + (isMaster ? " · 마스터 · " : " · ") + currentDd + " 조회 중");
+        setStatus(currentQuarterLabel() + (isMaster ? " ? ??? ? " : " ? ") + currentDd + " ?? ?");
         doSearch();
       }
     });
@@ -393,11 +456,11 @@ function renderTable() {
 
 function renderDetail(person) {
   if (!person) {
-    $("detailScope").textContent = "선택 대기";
-    $("detailBody").innerHTML = '<div class="empty">지역 점장 목록에서 행을 선택하세요.</div>';
+    $("detailScope").textContent = "\uc120\ud0dd \ub300\uae30";
+    $("detailBody").innerHTML = '<div class="empty">\uc9c0\uc5ed \uc810\uc7a5 \ubaa9\ub85d\uc5d0\uc11c \ud589\uc744 \uc120\ud0dd\ud558\uc138\uc694.</div>';
     return;
   }
-  $("detailScope").textContent = person.name + " · " + currentQuarter;
+  $("detailScope").textContent = person.name + " \u00b7 " + currentQuarter;
   const regionScores = peopleRows.map((p) => p.currentAvg).filter((v) => v !== null);
   const regionAvg = avg(regionScores);
   const vsRegion = person.currentAvg !== null && regionAvg !== null ? person.currentAvg - regionAvg : null;
@@ -407,27 +470,29 @@ function renderDetail(person) {
     const value = scoreOf(row);
     if (value !== null) trendMap.get(row._quarterId).push(value);
   });
-  const trend = Array.from(trendMap.entries()).map(([id, values]) => ({ id, label: (dataObj.quarters[id]?.label || id), value: avg(values) }));
+  const trend = Array.from(trendMap.entries())
+    .map(([id, values]) => ({ id, label: (dataObj.quarters[id]?.label || id), value: avg(values) }))
+    .sort((a, b) => quarterRank(b.id) - quarterRank(a.id));
   const recentTrend = trendLabel(person.delta);
   const events = person.history.slice().sort((a, b) => {
-    const q = quarterRank(a._quarterId) - quarterRank(b._quarterId);
+    const q = quarterRank(b._quarterId) - quarterRank(a._quarterId);
     if (q) return q;
-    return String(rowDate(a)).localeCompare(String(rowDate(b)));
+    return String(rowDate(b)).localeCompare(String(rowDate(a)));
   });
   const initial = String(person.name || "?").slice(0, 1);
   $("detailBody").innerHTML =
-    '<div class="profile"><div class="avatar">' + initial + '</div><div><strong>' + person.name + '</strong><span>' + person.emp + ' · ' + person.pos + ' · ' + (person.store || "") + '</span></div></div>' +
+    '<div class="profile"><div class="avatar">' + initial + '</div><div><strong>' + person.name + '</strong><span>' + person.emp + ' \u00b7 ' + person.pos + ' \u00b7 ' + (person.store || "") + '</span></div></div>' +
     '<div class="person-insights">' +
-      '<div class="insight-card"><span>개인 평균</span><strong>' + fmt2(person.historyAvg) + '</strong></div>' +
-      '<div class="insight-card"><span>누적 평균 대비</span><strong class="' + deltaClass(person.avgDelta) + '">' + fmtDelta(person.avgDelta, "0.00") + '</strong></div>' +
-      '<div class="insight-card"><span>지역 평균 대비</span><strong class="' + deltaClass(vsRegion) + '">' + fmtDelta(vsRegion) + '</strong></div>' +
-      '<div class="insight-card"><span>최근 흐름</span><strong class="' + recentTrend.cls + '">' + recentTrend.text + '</strong></div>' +
+      '<div class="insight-card"><span>\uac1c\uc778 \ud3c9\uade0</span><strong>' + fmt2(person.historyAvg) + '</strong></div>' +
+      '<div class="insight-card"><span>\ub204\uc801 \ud3c9\uade0 \ub300\ube44</span><strong class="' + deltaClass(person.avgDelta) + '">' + fmtDelta(person.avgDelta, "0.00") + '</strong></div>' +
+      '<div class="insight-card"><span>\uc9c0\uc5ed \ud3c9\uade0 \ub300\ube44</span><strong class="' + deltaClass(vsRegion) + '">' + fmtDelta(vsRegion) + '</strong></div>' +
+      '<div class="insight-card"><span>\ucd5c\uadfc \ud750\ub984</span><strong class="' + recentTrend.cls + '">' + recentTrend.text + '</strong></div>' +
     '</div>' +
-    '<div class="detail-title">최근 평가 흐름</div>' +
-    '<div class="trend-row">' + trend.map((t) => '<div class="trend-chip"><span>' + t.label + '</span><strong class="' + scoreClass(t.value) + '">' + fmt2(t.value) + '</strong></div>').join("") + '</div>' +
-    '<div class="detail-title">점포 / 지역 이동 이력</div>' +
-    '<div class="timeline">' + events.map((r) => '<div class="audit-event"><strong>' + r._quarterLabel + ' · ' + (r.store || "") + ' · ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + (r.dd || "") + ' · 조사일자 ' + rowDate(r) + '</span></div>').join("") + '</div>' +
-    '<p class="notice">선택한 분기 이후의 미래 데이터는 표시하지 않습니다. 2025년 이후 자료는 참고 아카이빙 기준입니다.</p>';
+    '<div class="detail-title">\ucd5c\uadfc \ud3c9\uac00 \ud750\ub984</div>' +
+    '<div class="trend-row">' + trend.map((t) => '<div class="trend-chip ' + (t.id === currentQuarter ? "current-quarter" : "") + '" title="' + (t.id === currentQuarter ? "\uc120\ud0dd\ud55c \ubd84\uae30" : "") + '"><span>' + t.label + '</span><strong class="' + scoreClass(t.value) + '">' + fmt2(t.value) + '</strong></div>').join("") + '</div>' +
+    '<div class="detail-title">\uc810\ud3ec / \uc9c0\uc5ed \uc774\ub3d9 \uc774\ub825</div>' +
+    '<div class="timeline">' + events.map((r) => '<div class="audit-event ' + (r._quarterId === currentQuarter ? "current-quarter" : "") + '"><strong>' + r._quarterLabel + ' \u00b7 ' + (r.store || "") + ' \u00b7 ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + (r.dd || "") + ' \u00b7 \uc870\uc0ac\uc77c\uc790 ' + rowDate(r) + '</span></div>').join("") + '</div>' +
+    '<p class="notice">\uc120\ud0dd\ud55c \ubd84\uae30 \uc774\ud6c4\uc758 \ubbf8\ub798 \ub370\uc774\ud130\ub294 \ud45c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. 2025\ub144 \uc774\ud6c4 \uc790\ub8cc\ub294 \ucc38\uace0 \uc544\uce74\uc774\ube59 \uae30\uc900\uc785\ub2c8\ub2e4.</p>';
 }
 
 function doSearch() {
@@ -488,9 +553,7 @@ function logout() {
 function resetHome() {
   if (!dataObj) return;
   setCurrentQuarter(defaultQuarterId());
-  document.querySelectorAll("[data-quarter]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.quarter === currentQuarter);
-  });
+  fillQuarterControls();
   currentDd = null;
   isMaster = false;
   selectedLoginDd = null;

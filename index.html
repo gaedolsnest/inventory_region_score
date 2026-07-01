@@ -4,12 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>정기 재고조사 점수조회 - 누적 미리보기</title>
-  <link rel="icon" href="favicon.ico?v=1" />
-  <link rel="stylesheet" href="style.css?v=metric_20260629" />
+  <link rel="icon" type="image/svg+xml" href="favicon-black.svg?v=q2_blacknamed_20260701" />
+  <link rel="alternate icon" href="favicon-black.ico?v=q2_blacknamed_20260701" />
+  <link rel="stylesheet" href="style.css?v=q2_blacknamed_20260701" />
   <style>
     .official-notice{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #bfd4ff;border-left:4px solid #2563eb;border-radius:8px;padding:13px 15px;margin:0 0 16px;color:#1e293b;font-size:14px;line-height:1.45}
     .official-notice strong{color:#1d4ed8;white-space:nowrap}
-    .official-notice .notice-copy{display:grid;gap:3px}
+    .official-notice .notice-copy{display:grid;gap:4px}
+    .official-notice .notice-legend{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;color:#475569;font-size:12px}
+    .legend-badge{display:inline-flex;align-items:center;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;white-space:nowrap}
+    .legend-badge.handover{background:#dbeafe;color:#1d4ed8}
+    .legend-badge.replacement{background:#ffedd5;color:#c2410c}
     .person-insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
     .insight-card{border:1px solid #d8e1ee;border-radius:8px;padding:12px;background:#fff}
     .insight-card span{display:block;color:#64748b;font-size:12px;margin-bottom:7px}
@@ -32,8 +37,8 @@
     .card-filter{width:240px;border:1px solid #d8e1ee;border-radius:8px;padding:9px 11px;font-size:13px;background:#fff}
     .card-head.with-filter{gap:12px}
     .card-head.with-filter strong{white-space:nowrap}
-    .region-filter{width:100%;border:1px solid #2b374d;background:#111827;color:#fff;border-radius:8px;padding:10px 11px;font-size:13px;margin-bottom:8px;outline:none}
-    .region-filter::placeholder{color:#8ea0ba}
+    .region-filter{width:100%;border:1px solid rgba(100,116,139,.22);background:rgba(255,255,255,.58);color:#111827;border-radius:8px;padding:10px 11px;font-size:13px;margin-bottom:8px;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
+    .region-filter::placeholder{color:#98a2b3}
     .intro-panel{background:#fff;border:1px solid #d8e1ee;border-radius:8px;padding:18px;margin:0 0 16px}
     .intro-panel h2{margin:0 0 10px;font-size:18px;letter-spacing:0;color:#0f172a}
     .intro-panel p{margin:0 0 12px;color:#475569;font-size:14px;line-height:1.55}
@@ -49,7 +54,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <button class="brand" id="brandHome" type="button" title="처음 화면">
-        <div class="brand-mark"><img src="favicon.ico?v=1" alt="" /></div><div><strong>정기 재고조사</strong><span>지역별 점수조회</span></div>
+        <div class="brand-mark"><img src="abc-mart-black.svg?v=q2_blacknamed_20260701" alt="" /></div><div><strong>정기 재고조사</strong><span>지역별 점수조회</span></div>
       </button>
       <div class="side-label">분기</div>
       <div class="side-list" id="quarterSide"></div>
@@ -72,6 +77,7 @@
         <span class="notice-copy">
           <span>선택한 분기의 조사 결과를 기준으로 조회됩니다.</span>
           <span>2025년 이후 과거 자료는 점장별 점수 흐름을 참고하기 위한 아카이빙 데이터로 제공됩니다.</span>
+          <span class="notice-legend"><em class="legend-badge handover">인수인계</em> 별도 인수인계 재고조사 기록 <em class="legend-badge replacement">인수인계 대체</em> 정기 재고조사를 인수인계 재고조사로 대체한 건</span>
         </span>
       </div>
 
@@ -154,6 +160,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=alias_20260630"></script>
+  <script src="app.js?v=q2_blacknamed_20260701"></script>
 </body>
 </html>
