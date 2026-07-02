@@ -27,9 +27,12 @@ let selectedPersonKey = null;
 let expandedQuarterYears = new Set();
 let quarterTreeBootstrapped = false;
 let loginModalMode = "region";
+let detailTab = "summary";
+let selectedQuantityKey = null;
 
 const $ = (id) => document.getElementById(id);
 const norm = (s) => String(s || "").replace(/\s+/g, "").trim().toLowerCase();
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 const fmt2 = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-";
@@ -41,6 +44,22 @@ const fmtDelta = (v, empty = "N/A") => {
   if (!Number.isFinite(v)) return empty;
   if (Math.abs(v) < 0.005) return "0.00";
   return (v > 0 ? "+" : "") + fmt2(v);
+};
+const fmtQty = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "-";
+  return n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+};
+const fmtQtyDiff = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "-";
+  if (Math.abs(n) < 0.0005) return "0";
+  return (n > 0 ? "+" : "") + fmtQty(n);
+};
+const qtyClass = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n) || Math.abs(n) < 0.0005) return "flat";
+  return n > 0 ? "qty-pos" : "qty-neg";
 };
 const personKey = (r) => {
   const alias = norm(r.person_alias || r.person_key);
@@ -254,8 +273,10 @@ function fillQuarterControls() {
       fillRegionsForQuarter();
       if (currentDd) {
         selectedPersonKey = null;
+        detailTab = "summary";
+        selectedQuantityKey = null;
         paintRegion(currentDd, true);
-        setStatus(currentQuarterLabel() + (isMaster ? " ? ??? ? " : " ? ") + currentDd + " ?? ?");
+        setStatus(currentQuarterLabel() + (isMaster ? " · 마스터 · " : " · ") + currentDd + " 조회 중");
         doSearch();
       }
     });
@@ -286,6 +307,8 @@ function fillRegionsForQuarter() {
       if (isMaster) {
         currentDd = selectedLoginDd;
         selectedPersonKey = null;
+        detailTab = "summary";
+        selectedQuantityKey = null;
         paintRegion(currentDd, true);
         setStatus(currentQuarterLabel() + " · 마스터 · " + currentDd + " 조회 중");
         doSearch();
@@ -377,6 +400,67 @@ function rowDate(row) {
     });
   }
   return dates.sort().at(-1) || row._quarterLabel || "";
+}
+
+function recordDate(row, rec) {
+  return String(rec?.date || rec?.detail?.E || rowDate(row) || "");
+}
+
+function quantityValue(detail, key) {
+  const n = Number(detail?.[key]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function quantityRecordKey(row, rec, index) {
+  return [row._quarterId, row._rowIndex, index, recordDate(row, rec), row.store || ""].join("|");
+}
+
+function quantityRecordsForPerson(person) {
+  if (!person) return [];
+  const records = [];
+  const sortedRows = person.history.slice().sort((a, b) => {
+    const q = quarterRank(b._quarterId) - quarterRank(a._quarterId);
+    if (q) return q;
+    return String(rowDate(b)).localeCompare(String(rowDate(a)));
+  });
+  sortedRows.forEach((row) => {
+    (row.records || [])
+      .map((rec, index) => ({ rec, index }))
+      .sort((a, b) => String(recordDate(row, b.rec)).localeCompare(String(recordDate(row, a.rec))))
+      .forEach(({ rec, index }) => {
+      const detail = rec.detail || {};
+      const hasQuantity = ["F", "H", "I", "O", "Q", "R", "X", "Z", "AA", "AG", "AI", "AJ"].some((key) => quantityValue(detail, key) !== null);
+      records.push({
+        key: quantityRecordKey(row, rec, index),
+        row,
+        rec,
+        detail,
+        hasQuantity,
+        date: recordDate(row, rec),
+        quarterId: row._quarterId,
+        quarterLabel: row._quarterLabel || formatQuarterLabel(row._quarterId),
+        store: row.store || "",
+        score: Number.isFinite(Number(rec.ap)) ? Number(rec.ap) : scoreOf(row),
+      });
+    });
+  });
+  return records;
+}
+
+function defaultQuantityKey(records) {
+  if (!records.length) return null;
+  const current = records.find((record) => record.quarterId === currentQuarter);
+  return (current || records[0]).key;
+}
+
+function quantityRows(record) {
+  const detail = record?.detail || {};
+  return [
+    { label: "신발", system: detail.F, actual: detail.H, diff: detail.I },
+    { label: "용품", system: detail.O, actual: detail.Q, diff: detail.R },
+    { label: "의류", system: detail.X, actual: detail.Z, diff: detail.AA },
+    { label: "합계", system: detail.AG, actual: detail.AI, diff: detail.AJ, total: true },
+  ];
 }
 
 function groupByPerson(rows) {
@@ -513,12 +597,16 @@ function renderTable() {
 }
 
 function renderDetail(person) {
+  const detailBody = $("detailBody");
   if (!person) {
-    $("detailScope").textContent = "\uc120\ud0dd \ub300\uae30";
-    $("detailBody").innerHTML = '<div class="empty">\uc9c0\uc5ed \uc810\uc7a5 \ubaa9\ub85d\uc5d0\uc11c \ud589\uc744 \uc120\ud0dd\ud558\uc138\uc694.</div>';
+    $("detailScope").textContent = "선택 대기";
+    detailBody.innerHTML = '<div class="empty">지역 점장 목록에서 행을 선택하세요.</div>';
+    detailTab = "summary";
+    selectedQuantityKey = null;
     return;
   }
-  $("detailScope").textContent = person.name + " \u00b7 " + currentQuarter;
+
+  $("detailScope").textContent = person.name + " · " + currentQuarterLabel();
   const regionScores = peopleRows.map((p) => p.currentAvg).filter((v) => v !== null);
   const regionAvg = avg(regionScores);
   const vsRegion = person.currentAvg !== null && regionAvg !== null ? person.currentAvg - regionAvg : null;
@@ -529,33 +617,98 @@ function renderDetail(person) {
     if (value !== null) trendMap.get(row._quarterId).push(value);
   });
   const trend = Array.from(trendMap.entries())
-    .map(([id, values]) => ({ id, label: (dataObj.quarters[id]?.label || id), value: avg(values) }))
+    .map(([id, values]) => ({ id, label: formatQuarterLabel(id, dataObj.quarters[id]?.label || id), value: avg(values) }))
     .sort((a, b) => quarterRank(b.id) - quarterRank(a.id));
-  const recentTrend = trendLabel(person.delta);
   const events = person.history.slice().sort((a, b) => {
     const q = quarterRank(b._quarterId) - quarterRank(a._quarterId);
     if (q) return q;
     return String(rowDate(b)).localeCompare(String(rowDate(a)));
   });
-  const initial = String(person.name || "?").slice(0, 1);
-  $("detailBody").innerHTML =
-    '<div class="profile"><div class="avatar">' + initial + '</div><div><strong>' + person.name + '</strong><span>' + person.emp + ' \u00b7 ' + person.pos + ' \u00b7 ' + (person.store || "") + '</span></div></div>' +
-    '<div class="person-insights">' +
-      '<div class="insight-card"><span>\uac1c\uc778 \ud3c9\uade0</span><strong>' + fmt2(person.historyAvg) + '</strong></div>' +
-      '<div class="insight-card"><span>\ub204\uc801 \ud3c9\uade0 \ub300\ube44</span><strong class="' + deltaClass(person.avgDelta) + '">' + fmtDelta(person.avgDelta, "0.00") + '</strong></div>' +
-      '<div class="insight-card"><span>\uc9c0\uc5ed \ud3c9\uade0 \ub300\ube44</span><strong class="' + deltaClass(vsRegion) + '">' + fmtDelta(vsRegion) + '</strong></div>' +
-      '<div class="insight-card"><span>\ucd5c\uadfc \ud750\ub984</span><strong class="' + recentTrend.cls + '">' + recentTrend.text + '</strong></div>' +
+  const recentTrend = trendLabel(person.delta);
+  const quantityRecords = quantityRecordsForPerson(person);
+  if (!selectedQuantityKey || !quantityRecords.some((record) => record.key === selectedQuantityKey)) {
+    selectedQuantityKey = defaultQuantityKey(quantityRecords);
+  }
+  const selectedRecord = quantityRecords.find((record) => record.key === selectedQuantityKey) || quantityRecords[0] || null;
+  const initial = esc(String(person.name || "?").slice(0, 1));
+  const activeTab = ["summary", "quantity", "history"].includes(detailTab) ? detailTab : "summary";
+  const tabs =
+    '<div class="detail-tabs" role="tablist" aria-label="상세 정보 전환">' +
+      '<button class="' + (activeTab === "summary" ? "active" : "") + '" type="button" data-detail-tab="summary">요약</button>' +
+      '<button class="' + (activeTab === "quantity" ? "active" : "") + '" type="button" data-detail-tab="quantity">수량</button>' +
+      '<button class="' + (activeTab === "history" ? "active" : "") + '" type="button" data-detail-tab="history">이력</button>' +
+    '</div>';
+
+  const summaryHtml =
+    '<div class="person-insights summary-insights">' +
+      '<div class="insight-card"><span>현재 점수</span><strong class="' + scoreClass(person.currentAvg) + '">' + fmt2(person.currentAvg) + '</strong><small>' + esc(currentQuarterLabel()) + '</small></div>' +
+      '<div class="insight-card"><span>직전 대비</span><strong class="' + deltaClass(person.delta) + '">' + fmtDelta(person.delta) + '</strong><small>' + (person.prevAvg === null ? "이전 이력 없음" : "이전 평가 기준") + '</small></div>' +
+      '<div class="insight-card"><span>누적 평균 대비</span><strong class="' + deltaClass(person.avgDelta) + '">' + fmtDelta(person.avgDelta, "0.00") + '</strong><small>개인 평균 ' + fmt2(person.historyAvg) + '</small></div>' +
+      '<div class="insight-card"><span>지역 평균 대비</span><strong class="' + deltaClass(vsRegion) + '">' + fmtDelta(vsRegion) + '</strong><small>지역 평균 ' + fmt2(regionAvg) + '</small></div>' +
+      '<div class="insight-card"><span>평가 이력</span><strong>' + person.count + '회</strong><small>2025 Q1 이후 누적</small></div>' +
+      '<div class="insight-card"><span>최근 흐름</span><strong class="' + recentTrend.cls + '">' + recentTrend.text + '</strong><small>직전 평가 기준</small></div>' +
     '</div>' +
-    '<div class="detail-title">\ucd5c\uadfc \ud3c9\uac00 \ud750\ub984</div>' +
-    '<div class="trend-row">' + trend.map((t) => '<div class="trend-chip ' + (t.id === currentQuarter ? "current-quarter" : "") + '" title="' + (t.id === currentQuarter ? "\uc120\ud0dd\ud55c \ubd84\uae30" : "") + '"><span>' + t.label + '</span><strong class="' + scoreClass(t.value) + '">' + fmt2(t.value) + '</strong></div>').join("") + '</div>' +
-    '<div class="detail-title">\uc810\ud3ec / \uc9c0\uc5ed \uc774\ub3d9 \uc774\ub825</div>' +
-    '<div class="timeline">' + events.map((r) => '<div class="audit-event ' + (r._quarterId === currentQuarter ? "current-quarter" : "") + (isHandoverRow(r) ? " handover-event" : "") + '"><strong>' + r._quarterLabel + ' \u00b7 ' + (r.store || "") + ' \u00b7 ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + eventMeta(r) + '</span></div>').join("") + '</div>' +
-    '<p class="notice">\uc120\ud0dd\ud55c \ubd84\uae30 \uc774\ud6c4\uc758 \ubbf8\ub798 \ub370\uc774\ud130\ub294 \ud45c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. 2025\ub144 \uc774\ud6c4 \uc790\ub8cc\ub294 \ucc38\uace0 \uc544\uce74\uc774\ube59 \uae30\uc900\uc785\ub2c8\ub2e4.</p>';
+    '<div class="detail-title">최근 평가 흐름</div>' +
+    '<div class="trend-row">' + trend.map((t) => '<div class="trend-chip ' + (t.id === currentQuarter ? "current-quarter" : "") + '" title="' + (t.id === currentQuarter ? "선택한 분기" : "") + '"><span>' + esc(t.label) + '</span><strong class="' + scoreClass(t.value) + '">' + fmt2(t.value) + '</strong></div>').join("") + '</div>';
+
+  const quantitySelector = quantityRecords.length
+    ? '<div class="quantity-record-list">' + quantityRecords.map((record) => {
+        const isActive = record.key === selectedRecord?.key;
+        const marker = record.quarterId === currentQuarter ? '<em>현재 선택 분기</em>' : "";
+        return '<button class="' + (isActive ? "active" : "") + '" type="button" data-quantity-key="' + esc(record.key) + '">' +
+          '<strong>' + esc(record.quarterLabel) + ' · ' + esc(record.store || "-") + '</strong>' +
+          '<span>' + esc(record.date || "날짜 없음") + ' · ' + fmt2(record.score) + '점' + marker + '</span>' +
+        '</button>';
+      }).join("") + '</div>'
+    : '<div class="empty compact">표시할 조사 기록이 없습니다.</div>';
+  const quantityTable = selectedRecord && selectedRecord.hasQuantity
+    ? '<div class="quantity-table-wrap"><table class="quantity-table"><thead><tr><th>구분</th><th class="num">전산</th><th class="num">실물</th><th class="num">차이</th></tr></thead><tbody>' +
+      quantityRows(selectedRecord).map((row) => '<tr class="' + (row.total ? "total" : "") + '"><td>' + row.label + '</td><td class="num">' + fmtQty(row.system) + '</td><td class="num">' + fmtQty(row.actual) + '</td><td class="num ' + qtyClass(row.diff) + '">' + fmtQtyDiff(row.diff) + '</td></tr>').join("") +
+      '</tbody></table></div>'
+    : '<div class="empty compact">이 기록에는 신발/용품/의류 수량 상세가 없습니다.</div>';
+  const quantityHtml =
+    '<div class="quantity-panel">' +
+      '<div class="detail-title">기록 선택</div>' +
+      quantitySelector +
+      (selectedRecord ? '<div class="quantity-current"><strong>' + esc(selectedRecord.quarterLabel) + ' · ' + esc(selectedRecord.store || "-") + '</strong><span>' + esc(selectedRecord.date || "날짜 없음") + ' · ' + fmt2(selectedRecord.score) + '점</span></div>' : "") +
+      quantityTable +
+      '<p class="quantity-note">수량 차이는 점수 판단이 아닌 참고 수량입니다.</p>' +
+    '</div>';
+
+  const historyHtml =
+    '<div class="detail-title">점포 / 지역 이동 이력</div>' +
+    '<div class="timeline">' + events.map((r) => '<div class="audit-event ' + (r._quarterId === currentQuarter ? "current-quarter" : "") + (isHandoverRow(r) ? " handover-event" : "") + '"><strong>' + esc(formatQuarterLabel(r._quarterId, r._quarterLabel)) + ' · ' + esc(r.store || "") + ' · ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + esc(eventMeta(r)) + '</span></div>').join("") + '</div>' +
+    '<p class="notice detail-notice">선택한 분기 이후의 미래 데이터는 표시하지 않습니다. 2025년 이후 자료는 점장 흐름 확인용 기준입니다.</p>';
+
+  const panelHtml = activeTab === "quantity" ? quantityHtml : activeTab === "history" ? historyHtml : summaryHtml;
+  detailBody.innerHTML =
+    '<div class="profile compact-profile"><div class="avatar">' + initial + '</div><div><strong>' + esc(person.name) + '</strong><span>' + esc(person.emp + ' · ' + person.pos + ' · ' + (person.store || "")) + '</span></div></div>' +
+    tabs +
+    '<div class="detail-panel">' + panelHtml + '</div>';
+
+  detailBody.querySelectorAll("[data-detail-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      detailTab = button.dataset.detailTab;
+      renderDetail(person);
+    });
+  });
+  detailBody.querySelectorAll("[data-quantity-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedQuantityKey = button.dataset.quantityKey;
+      detailTab = "quantity";
+      renderDetail(person);
+    });
+  });
 }
 
 function doSearch() {
   buildPeopleRows();
+  const previousKey = selectedPersonKey;
   if (!peopleRows.some((p) => p.key === selectedPersonKey)) selectedPersonKey = peopleRows[0]?.key || null;
+  if (previousKey !== selectedPersonKey) {
+    detailTab = "summary";
+    selectedQuantityKey = null;
+  }
   const selected = peopleRows.find((p) => p.key === selectedPersonKey);
   renderPersonSummary(selected);
   renderTable();
@@ -563,6 +716,10 @@ function doSearch() {
 }
 
 function selectPerson(key) {
+  if (selectedPersonKey !== key) {
+    detailTab = "summary";
+    selectedQuantityKey = null;
+  }
   selectedPersonKey = key;
   const selected = peopleRows.find((p) => p.key === key);
   renderPersonSummary(selected);
@@ -614,6 +771,8 @@ function completeLogin(dd) {
   currentDd = dd;
   selectedLoginDd = dd;
   selectedPersonKey = null;
+  detailTab = "summary";
+  selectedQuantityKey = null;
   paintRegion(dd, true);
   updateSelectedRegion();
   closeLoginModal();
@@ -621,7 +780,7 @@ function completeLogin(dd) {
   $("loginNotice").classList.add("hidden");
   if ($("introPanel")) $("introPanel").classList.add("hidden");
   if ($("legendPanel")) $("legendPanel").classList.add("hidden");
-  $("summaryGrid").classList.remove("hidden");
+  if ($("summaryGrid")) $("summaryGrid").classList.remove("hidden");
   $("searchToolbar").classList.remove("hidden");
   $("contentGrid").classList.remove("hidden");
   setStatus(currentQuarterLabel() + (isMaster ? " · 마스터 · " : " · ") + dd + " 조회 중");
@@ -657,13 +816,15 @@ function logout() {
   currentDd = null;
   isMaster = false;
   selectedPersonKey = null;
+  detailTab = "summary";
+  selectedQuantityKey = null;
   if ($("modalCodeInput")) $("modalCodeInput").value = "";
   getSearchInput().value = "";
   $("loginToolbar").classList.remove("hidden");
   $("loginNotice").classList.remove("hidden");
   if ($("introPanel")) $("introPanel").classList.remove("hidden");
   if ($("legendPanel")) $("legendPanel").classList.remove("hidden");
-  $("summaryGrid").classList.add("hidden");
+  if ($("summaryGrid")) $("summaryGrid").classList.add("hidden");
   $("searchToolbar").classList.add("hidden");
   $("contentGrid").classList.add("hidden");
   fillRegionsForQuarter();
@@ -681,6 +842,8 @@ function resetHome() {
   selectedLoginDd = null;
   selectedPersonKey = null;
   peopleRows = [];
+  detailTab = "summary";
+  selectedQuantityKey = null;
   closeLoginModal();
   if ($("qInput")) $("qInput").value = "";
   if ($("qInputInline")) $("qInputInline").value = "";
@@ -689,7 +852,7 @@ function resetHome() {
   $("loginNotice").classList.remove("hidden");
   if ($("introPanel")) $("introPanel").classList.remove("hidden");
   if ($("legendPanel")) $("legendPanel").classList.remove("hidden");
-  $("summaryGrid").classList.add("hidden");
+  if ($("summaryGrid")) $("summaryGrid").classList.add("hidden");
   $("searchToolbar").classList.add("hidden");
   $("contentGrid").classList.add("hidden");
   fillRegionsForQuarter();
