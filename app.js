@@ -111,6 +111,13 @@ function regionManager(region) {
   return REGION_MANAGERS[region] || "";
 }
 
+function shortRegionLabel(region) {
+  const text = String(region || "").replace(/\s+/g, "").replace(/지역$/, "");
+  if (!text) return "지역";
+  if (text.includes("온더스팟") || text.toUpperCase() === "OTS") return "OTS";
+  return text.slice(0, 2);
+}
+
 async function pbkdf2Key(passphrase, salt) {
   const baseKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: PBKDF2_ITERS, hash: "SHA-256" }, baseKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
@@ -630,12 +637,12 @@ function renderDetail(person) {
     selectedQuantityKey = defaultQuantityKey(quantityRecords);
   }
   const selectedRecord = quantityRecords.find((record) => record.key === selectedQuantityKey) || quantityRecords[0] || null;
-  const initial = esc(String(person.name || "?").slice(0, 1));
+  const regionBadge = esc(shortRegionLabel(person.currentRows?.[0]?.dd || currentDd || person.history?.[0]?.dd));
   const activeTab = ["summary", "quantity", "history"].includes(detailTab) ? detailTab : "summary";
   const tabs =
     '<div class="detail-tabs" role="tablist" aria-label="상세 정보 전환">' +
       '<button class="' + (activeTab === "summary" ? "active" : "") + '" type="button" data-detail-tab="summary">요약</button>' +
-      '<button class="' + (activeTab === "quantity" ? "active" : "") + '" type="button" data-detail-tab="quantity">수량</button>' +
+      '<button class="' + (activeTab === "quantity" ? "active" : "") + '" type="button" data-detail-tab="quantity">차이수량</button>' +
       '<button class="' + (activeTab === "history" ? "active" : "") + '" type="button" data-detail-tab="history">이동 이력</button>' +
     '</div>';
 
@@ -686,7 +693,7 @@ function renderDetail(person) {
 
   const panelHtml = activeTab === "quantity" ? quantityHtml : activeTab === "history" ? historyHtml : summaryHtml;
   detailBody.innerHTML =
-    '<div class="profile compact-profile"><div class="avatar">' + initial + '</div><div><strong>' + esc(person.name) + '</strong><span>' + esc(person.emp + ' · ' + person.pos + ' · ' + (person.store || "")) + '</span></div></div>' +
+    '<div class="profile compact-profile"><div class="avatar region-badge">' + regionBadge + '</div><div><strong>' + esc(person.name) + '</strong><span>' + esc(person.emp + ' · ' + person.pos + ' · ' + (person.store || "")) + '</span></div></div>' +
     tabs +
     '<div class="detail-panel">' + panelHtml + '</div>';
 
