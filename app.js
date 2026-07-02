@@ -636,7 +636,7 @@ function renderDetail(person) {
     '<div class="detail-tabs" role="tablist" aria-label="상세 정보 전환">' +
       '<button class="' + (activeTab === "summary" ? "active" : "") + '" type="button" data-detail-tab="summary">요약</button>' +
       '<button class="' + (activeTab === "quantity" ? "active" : "") + '" type="button" data-detail-tab="quantity">수량</button>' +
-      '<button class="' + (activeTab === "history" ? "active" : "") + '" type="button" data-detail-tab="history">이력</button>' +
+      '<button class="' + (activeTab === "history" ? "active" : "") + '" type="button" data-detail-tab="history">이동 이력</button>' +
     '</div>';
 
   const summaryHtml =
@@ -661,11 +661,14 @@ function renderDetail(person) {
         '</button>';
       }).join("") + '</div>'
     : '<div class="empty compact">표시할 조사 기록이 없습니다.</div>';
+  const missingQuantityMessage = selectedRecord && quarterRank(selectedRecord.quarterId) < quarterRank("2026Q1")
+    ? "2025년 자료는 점수 이력용으로 제공합니다. 수량 상세는 2026년 자료부터 표시됩니다."
+    : "이 기록에는 신발/용품/의류 수량 상세가 없습니다.";
   const quantityTable = selectedRecord && selectedRecord.hasQuantity
     ? '<div class="quantity-table-wrap"><table class="quantity-table"><thead><tr><th>구분</th><th class="num">전산</th><th class="num">실물</th><th class="num">차이</th></tr></thead><tbody>' +
       quantityRows(selectedRecord).map((row) => '<tr class="' + (row.total ? "total" : "") + '"><td>' + row.label + '</td><td class="num">' + fmtQty(row.system) + '</td><td class="num">' + fmtQty(row.actual) + '</td><td class="num ' + qtyClass(row.diff) + '">' + fmtQtyDiff(row.diff) + '</td></tr>').join("") +
       '</tbody></table></div>'
-    : '<div class="empty compact">이 기록에는 신발/용품/의류 수량 상세가 없습니다.</div>';
+    : '<div class="empty compact">' + missingQuantityMessage + '</div>';
   const quantityHtml =
     '<div class="quantity-panel">' +
       '<div class="detail-title">기록 선택</div>' +
@@ -677,6 +680,7 @@ function renderDetail(person) {
 
   const historyHtml =
     '<div class="detail-title">점포 / 지역 이동 이력</div>' +
+    '<p class="quantity-note">해당 점장이 어느 점포/지역 기준으로 평가됐는지 최신순으로 보여줍니다.</p>' +
     '<div class="timeline">' + events.map((r) => '<div class="audit-event ' + (r._quarterId === currentQuarter ? "current-quarter" : "") + (isHandoverRow(r) ? " handover-event" : "") + '"><strong>' + esc(formatQuarterLabel(r._quarterId, r._quarterLabel)) + ' · ' + esc(r.store || "") + ' · ' + fmt2(r.ap_avg) + noteBadge(r) + '</strong><span>' + esc(eventMeta(r)) + '</span></div>').join("") + '</div>' +
     '<p class="notice detail-notice">선택한 분기 이후의 미래 데이터는 표시하지 않습니다. 2025년 이후 자료는 점장 흐름 확인용 기준입니다.</p>';
 
