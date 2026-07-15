@@ -61,11 +61,15 @@ const qtyClass = (v) => {
   if (!Number.isFinite(n) || Math.abs(n) < 0.0005) return "flat";
   return n > 0 ? "qty-pos" : "qty-neg";
 };
+const EMPLOYEE_NUMBER_ALIASES = new Map([
+  ["1606191", "2605006"], // 신흥순: 퇴직금 정산 후 신규 사번 발급
+]);
 const personKey = (r) => {
   const alias = norm(r.person_alias || r.person_key);
   if (alias) return "alias:" + alias;
   const emp = norm(r.emp);
-  return emp ? "emp:" + emp : "name:" + norm((r.name || "") + "|" + (r.pos || ""));
+  const canonicalEmp = EMPLOYEE_NUMBER_ALIASES.get(emp) || emp;
+  return canonicalEmp ? "emp:" + canonicalEmp : "name:" + norm((r.name || "") + "|" + (r.pos || ""));
 };
 
 function noteInfo(item) {
@@ -503,7 +507,10 @@ function buildPeopleRows() {
       return String(rowDate(a)).localeCompare(String(rowDate(b)));
     });
     const scores = history.map(scoreOf).filter((v) => v !== null);
-    const currentScores = rows.map(scoreOf).filter((v) => v !== null);
+    const currentScores = history
+      .filter((r) => r._quarterId === currentQuarter && !isHandoverRow(r))
+      .map(scoreOf)
+      .filter((v) => v !== null);
     const currentAvg = avg(currentScores);
     const prevQuarterRows = history.filter((r) => quarterRank(r._quarterId) < quarterRank(currentQuarter));
     const prevQuarterId = prevQuarterRows.at(-1)?._quarterId;
